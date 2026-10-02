@@ -1,7 +1,7 @@
 # 21st Club — Product Plan
 
 > Working name: **21st Club** (placeholder, may change).
-> This document is the source of truth for *what* we are building. If a task seems to conflict with it, stop and ask instead of improvising.
+> This document is the source of truth for _what_ we are building. If a task seems to conflict with it, stop and ask instead of improvising.
 
 ---
 
@@ -9,16 +9,16 @@
 
 You found a brand-new football club that enters the Premier League in place of one of the promoted clubs. You get a fixed budget to sign **real Premier League players**. The site instantly predicts how your club would do over a season (points, finishing position, title / top-4 / relegation odds). Then you play the season **match by match**: pick your XI and tactics, watch each match as a short 2D highlight animation, make half-time decisions, and watch your club move up or down the league table.
 
-**One-line pitch:** *FPL is your weekly fantasy team. This is where you find out if you could actually run a club.*
+**One-line pitch:** _FPL is your weekly fantasy team. This is where you find out if you could actually run a club._
 
 ## 2. How it differs from FPL (don't drift into building FPL)
 
-| FPL | 21st Club |
-|---|---|
+| FPL                                     | 21st Club                                                                        |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
 | Score = sum of individual player points | Your club plays **real matches** with wins, draws, losses and a **league table** |
-| Squad balance doesn't matter | Balance, formation, depth and defence decide results |
-| Find out in May | Instant prediction, then match-by-match season |
-| Weekly admin grind | Low commitment; play when you want |
+| Squad balance doesn't matter            | Balance, formation, depth and defence decide results                             |
+| Find out in May                         | Instant prediction, then match-by-match season                                   |
+| Weekly admin grind                      | Low commitment; play when you want                                               |
 
 **Rule:** results always come from a **team-vs-team match simulation**, never from summing player stats. Even the future "live season" mode must keep this.
 
@@ -42,9 +42,16 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 
 ### Open decisions — ask before choosing
 
-- Exact budget and squad size (mockup uses £90.0m for an XI in FPL price units; engine squads use XI + bench of 7).
 - Final product name.
 - Monetisation (none yet).
+
+### Approved Phase 3 squad rules
+
+- Squad size: exactly 18 players — 2 goalkeepers, 6 defenders, 6 midfielders and 4 forwards.
+- Budget: 950 FPL price units (£95.0m), using the existing FPL prices.
+- Maximum three players from any real club.
+- Exclude only players whose FPL status is `u`; players with status `a`, `d`, `i` or `s` remain selectable.
+- The starting XI must use one of the six engine-supported formations: 4-4-2, 4-3-3, 3-5-2, 5-3-2, 4-5-1 or 3-4-3.
 
 ## 5. How the prediction works
 
@@ -84,19 +91,20 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 
 **Calibration guardrails (regression targets).** Any engine change must re-run both calibration scripts and stay near these:
 
-| Metric | Target | Current |
-|---|---|---|
-| Goals per game | ~2.8 | 2.75 |
-| Draws | 23–25% | 23.6% |
-| Goals distribution | Poisson-shaped, 7+ goals ~2–2.5% | 2.4% |
-| Red cards per game | ~0.1 | ~0.12 |
-| Favourite's title % | 45–65% | 63.5% |
-| Champion / 4th / 18th / 20th pts | 85–90 / ~70 / ~35 / 20–27 | 84.7 / 68.3 / 35.2 / 25.7 |
-| Highest relegation rate | under ~90% | 87.5% |
-| Spearman vs Opta 2026/27 pre-season forecast | check only | 0.839 |
-| Spearman vs real 2025/26 table | check only | 0.489 |
+| Metric                                       | Target                           | Current                   |
+| -------------------------------------------- | -------------------------------- | ------------------------- |
+| Goals per game                               | ~2.8                             | 2.75                      |
+| Draws                                        | 23–25%                           | 23.6%                     |
+| Goals distribution                           | Poisson-shaped, 7+ goals ~2–2.5% | 2.4%                      |
+| Red cards per game                           | ~0.1                             | ~0.12                     |
+| Favourite's title %                          | 45–65%                           | 63.5%                     |
+| Champion / 4th / 18th / 20th pts             | 85–90 / ~70 / ~35 / 20–27        | 84.7 / 68.3 / 35.2 / 25.7 |
+| Highest relegation rate                      | under ~90%                       | 87.5%                     |
+| Spearman vs Opta 2026/27 pre-season forecast | check only                       | 0.839                     |
+| Spearman vs real 2025/26 table               | check only                       | 0.489                     |
 
 **Hard rules:**
+
 - **No per-club adjustments.** User squads are built from individual players and must be rated by exactly the same global rules as real clubs.
 - Benchmarks are **check-only**; don't tune against one season's table (overfitting on 17–20 clubs).
 - Known, accepted gap: FPL player data caps correlation with last season's table at ~0.45–0.5 (team context, managers, injuries aren't in the data). A possible future fix is a separate, visible **club cohesion** rating for real clubs, with the user's club starting neutral. Not now.
@@ -105,20 +113,20 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 
 Style: dark, near-monochrome, inspired by Linear/Vercel. **The pitch is the only colour.** No coloured section bands, no gradients, no emoji.
 
-| Token | Value | Use |
-|---|---|---|
-| Background | `#08090A` | page |
-| Surface | `#0F1011` | cards |
-| Surface 2 | `#161718` | rows, chips |
-| Raised / selected | `#1C1D1F` | selected states, highlighted table row |
-| Border | `#232428` (cards), `#1F2023` (section hairlines) | |
-| Text | `#F7F8F8` | headings, primary text |
-| Text secondary | `#C8CCD2` | body |
-| Text muted | `#8A8F98` | labels |
-| Pitch / lines | `#123326` / `#24573F` | the only chromatic moment |
-| Your team | `#F7F8F8` (white) | dots, highlights |
-| Opponents | `#6B6F76` (grey) | dots |
-| Warning | `#E3A869` on `#2A2117` | injuries, rule violations |
+| Token             | Value                                            | Use                                    |
+| ----------------- | ------------------------------------------------ | -------------------------------------- |
+| Background        | `#08090A`                                        | page                                   |
+| Surface           | `#0F1011`                                        | cards                                  |
+| Surface 2         | `#161718`                                        | rows, chips                            |
+| Raised / selected | `#1C1D1F`                                        | selected states, highlighted table row |
+| Border            | `#232428` (cards), `#1F2023` (section hairlines) |                                        |
+| Text              | `#F7F8F8`                                        | headings, primary text                 |
+| Text secondary    | `#C8CCD2`                                        | body                                   |
+| Text muted        | `#8A8F98`                                        | labels                                 |
+| Pitch / lines     | `#123326` / `#24573F`                            | the only chromatic moment              |
+| Your team         | `#F7F8F8` (white)                                | dots, highlights                       |
+| Opponents         | `#6B6F76` (grey)                                 | dots                                   |
+| Warning           | `#E3A869` on `#2A2117`                           | injuries, rule violations              |
 
 - Fonts: **Barlow Condensed** (uppercase display headings, big numbers) + **Barlow** (body).
 - Primary button: white background, black text. Secondary: transparent with border.
@@ -130,6 +138,7 @@ Style: dark, near-monochrome, inspired by Linear/Vercel. **The pitch is the only
 **Phase 0 — Engine ✅ done.** Scaffold, event engine, FPL sync, ratings, match + season calibration, benchmarks.
 
 **Phase 1 — Season prediction (next).**
+
 - Surrogate model fitted to the event engine; parameters saved as JSON in the engine package.
 - Precomputed background for the 19 real clubs.
 - `predictSeason(userSquad, options)` → mean points, points histogram, position distribution, P(title), P(top 4), P(relegation), per-opponent expected points.
@@ -150,4 +159,4 @@ Style: dark, near-monochrome, inspired by Linear/Vercel. **The pitch is the only
 
 ## 10. Reference
 
-- Design mockups (canvas): https://claude.ai/artifact/KmA9PCsNeiJum8hV1jCuTt — pages: *Logged-in flow* (interactive), *Website*, *Mobile screens*.
+- Design mockups (canvas): https://claude.ai/artifact/KmA9PCsNeiJum8hV1jCuTt — pages: _Logged-in flow_ (interactive), _Website_, _Mobile screens_.

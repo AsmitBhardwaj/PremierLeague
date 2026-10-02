@@ -11,6 +11,7 @@
     "calibrate-season": "tsx src/calibrate-season.ts",
     "fit-surrogate": "tsx src/fit-surrogate.ts",
     "generate-season-background": "tsx src/generate-season-background.ts",
+    "generate-web-player-data": "tsx src/generate-web-player-data.ts",
     "sanity-predict-season": "tsx src/sanity-predict-season.ts",
     "benchmark-predict-season": "tsx src/benchmark-predict-season.ts",
     "fpl-sync": "tsx src/fpl-sync.ts",

@@ -9,7 +9,8 @@
     "hello": "tsx src/hello.ts",
     "calibrate": "tsx src/calibrate.ts",
     "calibrate-season": "tsx src/calibrate-season.ts",
-    "fpl-sync": "tsx src/fpl-sync.ts"
+    "fpl-sync": "tsx src/fpl-sync.ts",
+    "team-benchmark": "tsx src/team-benchmark.ts"
   },
   "dependencies": {
     "@pl/engine": "workspace:*"

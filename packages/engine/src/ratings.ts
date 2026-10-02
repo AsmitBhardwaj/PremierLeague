@@ -90,7 +90,7 @@ export interface RatedPlayer {
 /** Everything that decides how FPL numbers become ratings. */
 export const RATING_MAP = {
   /** Rating of an average Premier League starter at his own position's job. */
-  anchor: 60,
+  anchor: 60.0,
   /** Per-stat offset from the anchor for an average player of each position. */
   base: {
     GK: {
@@ -149,11 +149,46 @@ export const RATING_MAP = {
   /** Current-season minutes at which history_past is worth its minimum weight. */
   fullSeasonMinutes: 3000,
   minPastScale: 0.3,
-  maxZ: 1.8,
+  maxZ: 1.4,
+  /**
+   * Shape of the z -> rating curve (piecewise linear, an average player stays at 0):
+   *  - below `knee` standard deviations it is `belowKneeSlope` steep: a club's starting XI is the
+   *    best of its squad, so even weak clubs field above-average players and the gap that sets the
+   *    relegation line and the bottom club lives in this band;
+   *  - above `knee` it flattens to `aboveKneeSlope`: the best output numbers in FPL belong to the
+   *    best-supplied players, so the very top is the least trustworthy part. This stops a
+   *    super-team stacking outliers into a 90%+ title favourite.
+   * Player ordering never changes, only how far apart the ratings sit.
+   */
+  knee: 0.7,
+  belowKneeSlope: 2,
+  aboveKneeSlope: 0.6,
   /** Weighted minutes at which a player's rating may reach the full +/- maxZ standard deviations. */
   fullEvidenceMinutes: 1800,
   /** Rating points per 1.0 of (minutes/3000 - 0.5): regulars are trusted slightly more. */
   minutesNudge: 4,
+  /**
+   * How much of a club's own level is removed from a player's per-90 numbers (0 = raw, 1 = fully
+   * relative to his club). FPL counting stats inflate players of dominant sides and deflate good
+   * players of weak ones, so each stat is divided by (club level / league level)^exponent.
+   * Never 1: good clubs really do contain better players, we only strip the part that is context.
+   */
+  teamContext: {
+    /** Output stats (goals, assists, xG, xA, creativity, threat, ICT) vs the club's xG per 90. */
+    attack: 0.1,
+    /** Volume stats (tackles, CBI, recoveries, saves) vs the club's xGC per 90: defending more = more of them. */
+    defenceVolume: 0.15,
+    /** The xGC a player is on the pitch for is almost entirely the team; only part counts as his own. */
+    conceded: 0.3,
+  },
+  /** Weight of per-90 individual-quality metrics vs raw totals inside each composite. */
+  weights: {
+    /** shooting = xg * w + goals * (1 - w): finishing luck and penalties are noise, xG is not. */
+    shootingXg: 0.7,
+    /** passing = xa * a + creativity * b + assists * (1 - a - b): assists need a teammate to score. */
+    passingXa: 0.4,
+    passingCreativity: 0.45,
+  },
 } as const;
 
 const num = (v: Num): number => {
@@ -210,28 +245,32 @@ export function toRatingInputs(
 
 type MinutesGroup = 'all' | 'xg' | 'def' | 'gk';
 
+/** Which club-level figure a metric's per-90 rate is measured against (see RATING_MAP.teamContext). */
+type Context = 'attack' | 'defenceVolume' | 'conceded' | 'none';
+
 interface MetricDef {
   group: MinutesGroup;
   value: (s: SeasonTotals) => number;
+  context: Context;
 }
 
 const METRICS = {
-  goals: { group: 'all', value: (s) => s.goals },
-  assists: { group: 'all', value: (s) => s.assists },
-  creativity: { group: 'all', value: (s) => s.creativity },
-  threat: { group: 'all', value: (s) => s.threat },
-  ict: { group: 'all', value: (s) => s.ict },
-  xg: { group: 'xg', value: (s) => s.xg },
-  xa: { group: 'xg', value: (s) => s.xa },
-  tackles: { group: 'def', value: (s) => s.tackles },
-  cbi: { group: 'def', value: (s) => s.cbi },
-  recoveries: { group: 'def', value: (s) => s.recoveries },
-  dc: { group: 'def', value: (s) => s.dc },
-  saves: { group: 'gk', value: (s) => s.saves },
+  goals: { group: 'all', value: (s) => s.goals, context: 'attack' },
+  assists: { group: 'all', value: (s) => s.assists, context: 'attack' },
+  creativity: { group: 'all', value: (s) => s.creativity, context: 'attack' },
+  threat: { group: 'all', value: (s) => s.threat, context: 'attack' },
+  ict: { group: 'all', value: (s) => s.ict, context: 'attack' },
+  xg: { group: 'xg', value: (s) => s.xg, context: 'attack' },
+  xa: { group: 'xg', value: (s) => s.xa, context: 'attack' },
+  tackles: { group: 'def', value: (s) => s.tackles, context: 'defenceVolume' },
+  cbi: { group: 'def', value: (s) => s.cbi, context: 'defenceVolume' },
+  recoveries: { group: 'def', value: (s) => s.recoveries, context: 'defenceVolume' },
+  dc: { group: 'def', value: (s) => s.dc, context: 'defenceVolume' },
+  saves: { group: 'gk', value: (s) => s.saves, context: 'defenceVolume' },
   /** Expected goals conceded while on the pitch: a team-level signal of how well the side defends. */
-  xgcAgainst: { group: 'gk', value: (s) => s.xgc },
+  xgcAgainst: { group: 'gk', value: (s) => s.xgc, context: 'conceded' },
   /** Goals prevented vs expectation (positive = better than the xGC suggests). */
-  gkPrevented: { group: 'gk', value: (s) => s.xgc - s.goalsConceded },
+  gkPrevented: { group: 'gk', value: (s) => s.xgc - s.goalsConceded, context: 'none' },
 } as const satisfies Record<string, MetricDef>;
 
 type MetricKey = keyof typeof METRICS;
@@ -284,9 +323,71 @@ function poolFor(input: RatingInput): Pool {
   return pool;
 }
 
-const rate90 = (pool: Pool, k: MetricKey): { rate: number; minutes: number } => {
+/** A club's attacking and defensive level as a ratio to the league (1 = average). */
+export interface ClubLevel {
+  /** Its players' xG per minute / league's: > 1 = a side that creates a lot. */
+  attack: number;
+  /** Its xG conceded per minute on the pitch / league's: > 1 = a side that concedes a lot. */
+  conceded: number;
+}
+
+const NEUTRAL_LEVEL: ClubLevel = { attack: 1, conceded: 1 };
+
+/**
+ * Per-club levels from the same pooled evidence the ratings use. Dominant clubs inflate their
+ * players' output stats and deflate their conceded/volume stats, so rate90 divides that out.
+ * Derived from FPL data only, so a user-built squad is rated by exactly the same rules: every
+ * player is rated once, from the club his numbers were produced at.
+ */
+function clubLevels(inputs: readonly RatingInput[], pools: ReadonlyMap<RatingInput, Pool>) {
+  const sums = new Map<number, { xg: number; xgMin: number; xgc: number; xgcMin: number }>();
+  const league = { xg: 0, xgMin: 0, xgc: 0, xgcMin: 0 };
+  for (const i of inputs) {
+    const p = pools.get(i)!;
+    const c = sums.get(i.clubId) ?? { xg: 0, xgMin: 0, xgc: 0, xgcMin: 0 };
+    for (const t of [c, league]) {
+      t.xg += p.sums.xg;
+      t.xgMin += p.minutes.xg;
+      t.xgc += p.sums.xgcAgainst;
+      t.xgcMin += p.minutes.gk;
+    }
+    sums.set(i.clubId, c);
+  }
+  const ratio = (a: number, am: number, b: number, bm: number): number =>
+    am > 0 && bm > 0 && b > 0 ? a / am / (b / bm) : 1;
+  const out = new Map<number, ClubLevel>();
+  for (const [id, c] of sums) {
+    out.set(id, {
+      attack: ratio(c.xg, c.xgMin, league.xg, league.xgMin),
+      conceded: ratio(c.xgc, c.xgcMin, league.xgc, league.xgcMin),
+    });
+  }
+  return out;
+}
+
+/** Divisor that turns a raw per-90 rate into a club-relative one. */
+function contextFactor(k: MetricKey, level: ClubLevel): number {
+  const tc = RATING_MAP.teamContext;
+  switch (METRICS[k].context) {
+    case 'attack':
+      return level.attack ** tc.attack;
+    case 'defenceVolume':
+      return level.conceded ** tc.defenceVolume;
+    case 'conceded':
+      return level.conceded ** tc.conceded;
+    case 'none':
+      return 1;
+  }
+}
+
+const rate90 = (
+  pool: Pool,
+  k: MetricKey,
+  level: ClubLevel = NEUTRAL_LEVEL,
+): { rate: number; minutes: number } => {
   const minutes = pool.minutes[METRICS[k].group];
-  return { rate: minutes > 0 ? (pool.sums[k] / minutes) * 90 : 0, minutes };
+  const raw = minutes > 0 ? (pool.sums[k] / minutes) * 90 : 0;
+  return { rate: raw / contextFactor(k, level), minutes };
 };
 
 // -------------------------------------------------------------------- norms
@@ -316,11 +417,13 @@ const COMPOSITE_KEYS: CompositeKey[] = [
 export interface Norms {
   metrics: Record<Position, Record<MetricKey, Norm>>;
   composites: Record<Position, Record<CompositeKey, Norm>>;
+  /** Club id -> level used to make that club's players' stats club-relative. */
+  clubs: ReadonlyMap<number, ClubLevel>;
 }
 
 /** Shrunk z-score of one metric: evidence is blended with the positional mean by minutes played. */
-function z(pool: Pool, norm: Norm, k: MetricKey): number {
-  const { rate, minutes } = rate90(pool, k);
+function z(pool: Pool, norm: Norm, k: MetricKey, level: ClubLevel): number {
+  const { rate, minutes } = rate90(pool, k, level);
   const shrunk =
     (rate * minutes + norm.mean * RATING_MAP.priorMinutes) / (minutes + RATING_MAP.priorMinutes);
   return (shrunk - norm.mean) / norm.sd;
@@ -331,15 +434,22 @@ function rawComposites(
   position: Position,
   pool: Pool,
   metrics: Record<MetricKey, Norm>,
+  level: ClubLevel,
 ): Record<CompositeKey, number> {
-  const zz = (k: MetricKey): number => z(pool, metrics[k], k);
+  const zz = (k: MetricKey): number => z(pool, metrics[k], k, level);
+  const w = RATING_MAP.weights;
   const gk = position === 'GK';
   // Tackle/recovery counts are *higher* for sides that defend more, so on their own they would
   // rate dominant clubs' defenders poorly. Conceding less than average (xGC) credits them instead.
   const defenceShare = { GK: 0, DEF: 0.5, MID: 0.25, FWD: 0 }[position];
   return {
-    shooting: gk ? 0 : 0.5 * zz('xg') + 0.5 * zz('goals'),
-    passing: 0.3 * zz('assists') + 0.3 * zz('xa') + 0.4 * zz('creativity'),
+    // Per-90 quality (xG, xA, creativity) outweighs raw totals (goals, assists), which also depend
+    // on finishing luck and on how many chances the team supplies.
+    shooting: gk ? 0 : w.shootingXg * zz('xg') + (1 - w.shootingXg) * zz('goals'),
+    passing:
+      w.passingXa * zz('xa') +
+      w.passingCreativity * zz('creativity') +
+      (1 - w.passingXa - w.passingCreativity) * zz('assists'),
     dribbling: gk ? 0 : 0.5 * zz('threat') + 0.5 * zz('creativity'),
     tackling: gk ? 0 : 0.25 * (zz('tackles') + zz('cbi') + zz('recoveries') + zz('dc')),
     goalkeeping: gk ? 0.35 * zz('saves') + 0.65 * zz('gkPrevented') : 0,
@@ -351,12 +461,15 @@ function rawComposites(
 export function computeNorms(inputs: readonly RatingInput[]): Norms {
   const metrics = {} as Norms['metrics'];
   const pools = new Map<RatingInput, Pool>(inputs.map((i) => [i, poolFor(i)]));
+  const clubs = clubLevels(inputs, pools);
+  const levelOf = (i: RatingInput): ClubLevel => clubs.get(i.clubId) ?? NEUTRAL_LEVEL;
   for (const position of ['GK', 'DEF', 'MID', 'FWD'] as const) {
-    const group = inputs.filter((i) => i.position === position).map((i) => pools.get(i)!);
+    const group = inputs.filter((i) => i.position === position);
     const byMetric = {} as Record<MetricKey, Norm>;
     for (const k of METRIC_KEYS) {
+      // Norms are measured on club-relative rates, the same scale ratePlayer uses.
       const qualified = group
-        .map((p) => rate90(p, k))
+        .map((i) => rate90(pools.get(i)!, k, levelOf(i)))
         .filter((r) => r.minutes >= RATING_MAP.normMinMinutes);
       const total = qualified.reduce((a, r) => a + r.minutes, 0);
       const mean = total > 0 ? qualified.reduce((a, r) => a + r.rate * r.minutes, 0) / total : 0;
@@ -373,7 +486,7 @@ export function computeNorms(inputs: readonly RatingInput[]): Norms {
       .filter(
         (i) => i.position === position && pools.get(i)!.minutes.all >= RATING_MAP.normMinMinutes,
       )
-      .map((i) => rawComposites(position, pools.get(i)!, metrics[position]));
+      .map((i) => rawComposites(position, pools.get(i)!, metrics[position], levelOf(i)));
     const byKey = {} as Record<CompositeKey, Norm>;
     for (const key of COMPOSITE_KEYS) {
       const values = raws.map((r) => r[key]);
@@ -383,22 +496,35 @@ export function computeNorms(inputs: readonly RatingInput[]): Norms {
     }
     composites[position] = byKey;
   }
-  return { metrics, composites };
+  return { metrics, composites, clubs };
 }
 
 // ------------------------------------------------------------------ ratings
 
 const clampRating = (v: number): number => Math.round(Math.min(99, Math.max(1, v)));
 
+/** The z -> rating curve of RATING_MAP.knee, re-centred so an average player (z = 0) stays at 0. */
+export function warpZ(x: number): number {
+  const { knee, belowKneeSlope, aboveKneeSlope } = RATING_MAP;
+  const warp = (v: number): number =>
+    v > knee ? knee * belowKneeSlope + (v - knee) * aboveKneeSlope : v * belowKneeSlope;
+  return warp(x);
+}
+
 export function ratePlayer(input: RatingInput, norms: Norms): PlayerRatings {
   const pool = poolFor(input);
-  const raw = rawComposites(input.position, pool, norms.metrics[input.position]);
+  const raw = rawComposites(
+    input.position,
+    pool,
+    norms.metrics[input.position],
+    norms.clubs.get(input.clubId) ?? NEUTRAL_LEVEL,
+  );
   // Thin evidence also caps how far a rating can stray, however extreme the per-90 numbers are.
   const cap =
     RATING_MAP.maxZ * Math.sqrt(Math.min(1, pool.minutes.all / RATING_MAP.fullEvidenceMinutes));
   const cz = (k: CompositeKey): number => {
     const n = norms.composites[input.position][k];
-    return Math.max(-cap, Math.min(cap, (raw[k] - n.mean) / n.sd));
+    return warpZ(Math.max(-cap, Math.min(cap, (raw[k] - n.mean) / n.sd)));
   };
   const base = RATING_MAP.base[input.position];
   const { spread, anchor } = RATING_MAP;

@@ -16,7 +16,7 @@ export const TUNING = {
   counterTriggerMaxCol: 2,
 
   /** Logit slope per rating point of difference between attacker and defender. */
-  ratingSlope: 0.034,
+  ratingSlope: 0.031,
   passBase: 0.8,
   safePassBonus: 0.08,
   longBallBase: 0.36,
@@ -56,7 +56,7 @@ export const TUNING = {
     [0.072, 0.155, 0.072],
   ] as readonly (readonly number[])[],
   penaltyXg: 0.76,
-  keeperSlope: 0.006,
+  keeperSlope: 0.0065,
   onTargetBase: 0.38,
   blockedShare: 0.3,
   cornerAfterSave: 0.25,

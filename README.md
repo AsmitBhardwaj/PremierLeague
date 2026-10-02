@@ -35,7 +35,8 @@ Real-data scripts (run from the repo root):
 ```sh
 pnpm --filter @pl/scripts fpl-sync [--refresh]     # cache FPL JSON in scripts/data/cache (gitignored)
 pnpm --filter @pl/scripts calibrate                # match-level calibration (synthetic teams)
-pnpm --filter @pl/scripts calibrate-season [n]     # n seasons between the 20 real clubs (default 200)
+pnpm --filter @pl/scripts calibrate-season [n]     # n seasons between the 20 real clubs (default 200), incl. xG vs benchmark
+pnpm --filter @pl/scripts team-benchmark           # per-club xG for/against per 90 from the cache
 ```
 
 ## Roadmap

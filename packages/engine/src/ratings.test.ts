@@ -5,6 +5,7 @@ import {
   rateAll,
   simulateMatch,
   toRatingInputs,
+  warpZ,
   type FplBootstrapRaw,
   type FplElementRaw,
   type FplElementSummaryRaw,
@@ -97,8 +98,9 @@ describe('FPL rating mapping', () => {
     const average = others.reduce((a, r) => a + r.player.ratings.shooting, 0) / others.length;
     const flash = rated.find((r) => r.input.id === hot)!;
     expect(flash.player.ratings.shooting).toBeGreaterThan(average);
-    // Elite would be ~1.8 sd above average; 200 minutes of evidence must stay well short of it.
-    expect(flash.player.ratings.shooting).toBeLessThan(average + 0.8 * RATING_MAP.spread.shooting);
+    // Elite would be maxZ sd above average; 200 minutes of evidence must stay well short of it.
+    const elite = RATING_MAP.spread.shooting * warpZ(RATING_MAP.maxZ);
+    expect(flash.player.ratings.shooting).toBeLessThan(average + 0.75 * elite);
   });
 
   it('falls back on history_past when the current season has few minutes', () => {

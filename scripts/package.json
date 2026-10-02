@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "echo \"no tests in scripts\"",
-    "hello": "tsx src/hello.ts"
+    "hello": "tsx src/hello.ts",
+    "calibrate": "tsx src/calibrate.ts"
   },
   "dependencies": {
     "@pl/engine": "workspace:*"

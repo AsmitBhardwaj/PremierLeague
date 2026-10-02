@@ -99,8 +99,22 @@ describe('FPL rating mapping', () => {
     const flash = rated.find((r) => r.input.id === hot)!;
     expect(flash.player.ratings.shooting).toBeGreaterThan(average);
     // Elite would be maxZ sd above average; 200 minutes of evidence must stay well short of it.
+    // (The curve is flat above the knee, so thin evidence reaches a larger share of that scale.)
     const elite = RATING_MAP.spread.shooting * warpZ(RATING_MAP.maxZ);
-    expect(flash.player.ratings.shooting).toBeLessThan(average + 0.75 * elite);
+    expect(flash.player.ratings.shooting).toBeLessThan(average + 0.85 * elite);
+  });
+
+  it('rates a player with no top-flight history below an identical proven one', () => {
+    const { bootstrap, summaries } = fixture();
+    const output = { xg: 0.2, goals: 0.2 };
+    const unproven = element(3, 4, season(300, output));
+    const proven = element(3, 4, season(300, output));
+    bootstrap.elements.push(unproven, proven);
+    summaries.set(proven.id, { history_past: [season(2400, output), season(2400, output)] });
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    const shooting = (id: number): number =>
+      rated.find((r) => r.input.id === id)!.player.ratings.shooting;
+    expect(shooting(unproven.id)).toBeLessThan(shooting(proven.id));
   });
 
   it('falls back on history_past when the current season has few minutes', () => {

@@ -4,6 +4,7 @@
 import { buildClubs, simulateMatch } from '@pl/engine';
 import { DistributionStats } from './lib/distribution';
 import { loadFplCache } from './lib/fpl-cache';
+import { fplNameOf, loadLastSeasonTable } from './lib/last-season-table';
 import { buildTeamBenchmark, spearman } from './lib/team-benchmark';
 
 const SEASONS = Number(process.argv[2] ?? 200);
@@ -106,7 +107,46 @@ rows.forEach(({ c, a }, i) => {
   );
 });
 
-// Simulated xG per match next to the real benchmark, and how well the sim ranks the clubs.
+// Independent benchmark: the real 2025/26 final table. Promoted clubs have no row and are skipped.
+const realTable = loadLastSeasonTable();
+const compared = clubs.flatMap((c, i) => {
+  const row = realTable.find((r) => fplNameOf(r.club) === c.team.name);
+  return row ? [{ name: c.team.name, sim: acc[i]!.points / SEASONS, real: row.points }] : [];
+});
+console.log(
+  `\nSimulated avg points vs the real 2025/26 table (${compared.length} clubs that were in the league; ` +
+    `${clubs.length - compared.length} promoted clubs skipped)`,
+);
+console.log('Club                Sim pts  Real pts   Diff');
+const sd = (v: number): string => (v >= 0 ? '+' : '') + v.toFixed(1);
+for (const x of [...compared].sort((p, q) => q.real - p.real)) {
+  console.log(
+    `${x.name.padEnd(18)} ${x.sim.toFixed(1).padStart(8)} ${String(x.real).padStart(9)} ${sd(x.sim - x.real).padStart(6)}`,
+  );
+}
+const diffs = compared.map((x) => x.sim - x.real);
+const meanDiff = diffs.reduce((p, v) => p + v, 0) / diffs.length;
+const ptsRmse = Math.sqrt(diffs.reduce((p, v) => p + v * v, 0) / diffs.length);
+const ptsRmseCentred = Math.sqrt(diffs.reduce((p, v) => p + (v - meanDiff) ** 2, 0) / diffs.length);
+console.log(
+  `Spearman vs real table: ${spearman(
+    compared.map((x) => x.sim),
+    compared.map((x) => x.real),
+  ).toFixed(
+    3,
+  )}   points RMSE ${ptsRmse.toFixed(1)} (centred ${ptsRmseCentred.toFixed(1)}, mean diff ${sd(meanDiff)})`,
+);
+const promoted = clubs.flatMap((c, i) =>
+  realTable.some((r) => fplNameOf(r.club) === c.team.name)
+    ? []
+    : [`${c.team.name} ${(acc[i]!.points / SEASONS).toFixed(1)}`],
+);
+console.log(`Promoted clubs (sim avg pts): ${promoted.join(', ')}`);
+const fav = Math.max(...acc.map((a) => a.titles));
+console.log(`Favourite's title probability: ${pct(fav)}   (target 45-65%)`);
+
+// FPL-derived benchmark. Context-biased, for reference only: it is built from the same FPL stats
+// as the ratings, so it cannot judge whether removing their team-context bias helped.
 const perMatch = SEASONS * 2 * (n - 1);
 const simAvgPoints = acc.map((a) => a.points / SEASONS);
 const sim = acc.map((a, i) => ({
@@ -115,7 +155,7 @@ const sim = acc.map((a, i) => ({
   a: a.xga / perMatch,
   real: benchmark[i]!,
 }));
-console.log('\nxG per match: simulated vs real benchmark (sorted by benchmark strength)');
+console.log('\nxG per match: simulated vs FPL benchmark (context-biased, for reference only)');
 console.log('Club                Sim F  Sim A  Sim D  | Real F Real A Real D | dF     dA     dD');
 const signed = (v: number): string => (v >= 0 ? '+' : '') + v.toFixed(2);
 for (const x of [...sim].sort((p, q) => q.real.strength - p.real.strength)) {
@@ -133,7 +173,7 @@ const bias = (d: number[]): number => d.reduce((p, v) => p + v, 0) / d.length;
 const report = (label: string, d: number[]): string =>
   `${label} bias ${signed(bias(d))} rmse ${rmse(d).toFixed(3)} (centred ${rmse(d.map((v) => v - bias(d))).toFixed(3)})`;
 console.log(
-  `vs benchmark: ${report(
+  `vs FPL benchmark (context-biased, for reference only): ${report(
     'xG for',
     sim.map((x) => x.f - x.real.xgFor),
   )}; ` +
@@ -147,7 +187,7 @@ console.log(
     )}`,
 );
 console.log(
-  `Spearman (sim avg points vs benchmark xG difference): ` +
+  `Spearman vs FPL benchmark (context-biased, for reference only): ` +
     `${spearman(
       simAvgPoints,
       benchmark.map((b) => b.strength),

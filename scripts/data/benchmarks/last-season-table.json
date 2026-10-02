@@ -1,0 +1,212 @@
+{
+  "season": "2025/26",
+  "status": "final",
+  "sources": [
+    "https://en.wikipedia.org/wiki/2025%E2%80%9326_Premier_League",
+    "https://www.sportinglife.com/football/league-tables/english-premier-league/1/seasons/2025-2026/107"
+  ],
+  "retrieved": "2026-10-03",
+  "note": "Rows were identical in both sources. Order is final league position.",
+  "table": [
+    {
+      "club": "Arsenal",
+      "played": 38,
+      "won": 26,
+      "drawn": 7,
+      "lost": 5,
+      "goalsFor": 71,
+      "goalsAgainst": 27,
+      "points": 85
+    },
+    {
+      "club": "Manchester City",
+      "played": 38,
+      "won": 23,
+      "drawn": 9,
+      "lost": 6,
+      "goalsFor": 77,
+      "goalsAgainst": 35,
+      "points": 78
+    },
+    {
+      "club": "Manchester United",
+      "played": 38,
+      "won": 20,
+      "drawn": 11,
+      "lost": 7,
+      "goalsFor": 69,
+      "goalsAgainst": 50,
+      "points": 71
+    },
+    {
+      "club": "Aston Villa",
+      "played": 38,
+      "won": 19,
+      "drawn": 8,
+      "lost": 11,
+      "goalsFor": 56,
+      "goalsAgainst": 49,
+      "points": 65
+    },
+    {
+      "club": "Liverpool",
+      "played": 38,
+      "won": 17,
+      "drawn": 9,
+      "lost": 12,
+      "goalsFor": 63,
+      "goalsAgainst": 53,
+      "points": 60
+    },
+    {
+      "club": "Bournemouth",
+      "played": 38,
+      "won": 13,
+      "drawn": 18,
+      "lost": 7,
+      "goalsFor": 58,
+      "goalsAgainst": 54,
+      "points": 57
+    },
+    {
+      "club": "Sunderland",
+      "played": 38,
+      "won": 14,
+      "drawn": 12,
+      "lost": 12,
+      "goalsFor": 42,
+      "goalsAgainst": 48,
+      "points": 54
+    },
+    {
+      "club": "Brighton & Hove Albion",
+      "played": 38,
+      "won": 14,
+      "drawn": 11,
+      "lost": 13,
+      "goalsFor": 52,
+      "goalsAgainst": 46,
+      "points": 53
+    },
+    {
+      "club": "Brentford",
+      "played": 38,
+      "won": 14,
+      "drawn": 11,
+      "lost": 13,
+      "goalsFor": 55,
+      "goalsAgainst": 52,
+      "points": 53
+    },
+    {
+      "club": "Chelsea",
+      "played": 38,
+      "won": 14,
+      "drawn": 10,
+      "lost": 14,
+      "goalsFor": 58,
+      "goalsAgainst": 52,
+      "points": 52
+    },
+    {
+      "club": "Fulham",
+      "played": 38,
+      "won": 15,
+      "drawn": 7,
+      "lost": 16,
+      "goalsFor": 47,
+      "goalsAgainst": 51,
+      "points": 52
+    },
+    {
+      "club": "Newcastle United",
+      "played": 38,
+      "won": 14,
+      "drawn": 7,
+      "lost": 17,
+      "goalsFor": 53,
+      "goalsAgainst": 55,
+      "points": 49
+    },
+    {
+      "club": "Everton",
+      "played": 38,
+      "won": 13,
+      "drawn": 10,
+      "lost": 15,
+      "goalsFor": 47,
+      "goalsAgainst": 50,
+      "points": 49
+    },
+    {
+      "club": "Leeds United",
+      "played": 38,
+      "won": 11,
+      "drawn": 14,
+      "lost": 13,
+      "goalsFor": 49,
+      "goalsAgainst": 56,
+      "points": 47
+    },
+    {
+      "club": "Crystal Palace",
+      "played": 38,
+      "won": 11,
+      "drawn": 12,
+      "lost": 15,
+      "goalsFor": 41,
+      "goalsAgainst": 51,
+      "points": 45
+    },
+    {
+      "club": "Nottingham Forest",
+      "played": 38,
+      "won": 11,
+      "drawn": 11,
+      "lost": 16,
+      "goalsFor": 48,
+      "goalsAgainst": 51,
+      "points": 44
+    },
+    {
+      "club": "Tottenham Hotspur",
+      "played": 38,
+      "won": 10,
+      "drawn": 11,
+      "lost": 17,
+      "goalsFor": 48,
+      "goalsAgainst": 57,
+      "points": 41
+    },
+    {
+      "club": "West Ham United",
+      "played": 38,
+      "won": 10,
+      "drawn": 9,
+      "lost": 19,
+      "goalsFor": 46,
+      "goalsAgainst": 65,
+      "points": 39
+    },
+    {
+      "club": "Burnley",
+      "played": 38,
+      "won": 4,
+      "drawn": 10,
+      "lost": 24,
+      "goalsFor": 38,
+      "goalsAgainst": 75,
+      "points": 22
+    },
+    {
+      "club": "Wolverhampton Wanderers",
+      "played": 38,
+      "won": 3,
+      "drawn": 11,
+      "lost": 24,
+      "goalsFor": 27,
+      "goalsAgainst": 68,
+      "points": 20
+    }
+  ]
+}

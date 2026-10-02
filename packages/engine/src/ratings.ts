@@ -141,11 +141,19 @@ export const RATING_MAP = {
     pace: 5,
   },
   /** Minutes of evidence worth as much as the positional average (shrinkage strength). */
-  priorMinutes: 900,
+  priorMinutes: 700,
+  /**
+   * Prior for players without top-flight history: a player the league has not yet seen is not an
+   * average Premier League player (most arrive from weaker leagues and are less proven), so his
+   * shrinkage target sits `unprovenPriorZ` standard deviations below the positional mean. The
+   * discount fades linearly to nothing as his earlier-seasons minutes reach `provenMinutes`.
+   */
+  unprovenPriorZ: 0.5,
+  provenMinutes: 1800,
   /** Weighted minutes a player needs to count towards the positional norms. */
   normMinMinutes: 900,
   /** Recency weights for the last three seasons in history_past. */
-  pastWeights: [0.9, 0.5, 0.25] as readonly number[],
+  pastWeights: [1, 0.25, 0.05] as readonly number[],
   /** Current-season minutes at which history_past is worth its minimum weight. */
   fullSeasonMinutes: 3000,
   minPastScale: 0.3,
@@ -162,7 +170,7 @@ export const RATING_MAP = {
    */
   knee: 0.7,
   belowKneeSlope: 2,
-  aboveKneeSlope: 0.6,
+  aboveKneeSlope: 0.15,
   /** Weighted minutes at which a player's rating may reach the full +/- maxZ standard deviations. */
   fullEvidenceMinutes: 1800,
   /** Rating points per 1.0 of (minutes/3000 - 0.5): regulars are trusted slightly more. */
@@ -293,6 +301,8 @@ function seasonHas(group: MinutesGroup, s: SeasonTotals): boolean {
 interface Pool {
   /** Recency-weighted minutes per group. */
   minutes: Record<MinutesGroup, number>;
+  /** Unweighted minutes from earlier seasons (history_past): his top-flight track record. */
+  pastMinutes: number;
   sums: Record<MetricKey, number>;
 }
 
@@ -308,6 +318,7 @@ function poolFor(input: RatingInput): Pool {
 
   const pool: Pool = {
     minutes: { all: 0, xg: 0, def: 0, gk: 0 },
+    pastMinutes: input.past.reduce((a, s) => a + s.minutes, 0),
     sums: Object.fromEntries(METRIC_KEYS.map((k) => [k, 0])) as Record<MetricKey, number>,
   };
   for (const { s, w } of seasons) {
@@ -424,8 +435,10 @@ export interface Norms {
 /** Shrunk z-score of one metric: evidence is blended with the positional mean by minutes played. */
 function z(pool: Pool, norm: Norm, k: MetricKey, level: ClubLevel): number {
   const { rate, minutes } = rate90(pool, k, level);
+  const unproven = Math.max(0, 1 - pool.pastMinutes / RATING_MAP.provenMinutes);
+  const prior = norm.mean - RATING_MAP.unprovenPriorZ * unproven * norm.sd;
   const shrunk =
-    (rate * minutes + norm.mean * RATING_MAP.priorMinutes) / (minutes + RATING_MAP.priorMinutes);
+    (rate * minutes + prior * RATING_MAP.priorMinutes) / (minutes + RATING_MAP.priorMinutes);
   return (shrunk - norm.mean) / norm.sd;
 }
 

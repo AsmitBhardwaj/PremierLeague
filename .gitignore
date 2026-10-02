@@ -14,7 +14,8 @@ next-env.d.ts
 data-cache/
 .cache/
 scripts/.cache/
-scripts/data/
+scripts/data/*
+!scripts/data/benchmarks/
 
 .DS_Store
 npm-debug.log*

@@ -4,15 +4,22 @@ import type { Position, Tactic } from './types';
 export const TUNING = {
   /** Seconds of game time consumed by one on-ball action. */
   stepSeconds: [6, 14] as const,
-  counterStepSeconds: [3, 7] as const,
+  counterStepSeconds: [5.5, 11.5] as const,
   /** Steps a counter-attack stays "live" after the ball is won. */
-  counterMaxSteps: 5,
+  counterMaxSteps: 3,
+  counterForwardBoost: 1.04,
+  counterSkipColChance: 0.1,
+  /** Extra shot / long-ball propensity while a counter-attack is live. */
+  counterShotBoost: 1.05,
+  counterLongBallBoost: 1.2,
+  /** A counter-attack only starts when the ball is won this deep (own-half col index). */
+  counterTriggerMaxCol: 2,
 
   /** Logit slope per rating point of difference between attacker and defender. */
-  ratingSlope: 0.018,
+  ratingSlope: 0.034,
   passBase: 0.8,
   safePassBonus: 0.08,
-  longBallBase: 0.5,
+  longBallBase: 0.36,
   dribbleBase: 0.55,
 
   /** Rating points added to every home player. */
@@ -28,12 +35,12 @@ export const TUNING = {
 
   pressBonus: 6,
   defensiveBonus: 5,
-  counterDefPenalty: 6,
+  counterDefPenalty: 1.5,
   counterBuildPenalty: 3,
-  counterXgBonus: 1.3,
+  counterXgBonus: 1.05,
 
   /** Shot propensity by attacking column (0 = own goal line, 5 = opponent box). */
-  shotWeight: [0, 0, 0.007, 0.019, 0.06, 0.21] as readonly number[],
+  shotWeight: [0, 0, 0.0095, 0.0245, 0.078, 0.273] as readonly number[],
   wideShotFactor: 0.7,
   dribbleWeight: 0.16,
   longBallWeight: [0.22, 0.16, 0.09, 0.04, 0, 0] as readonly number[],
@@ -45,8 +52,8 @@ export const TUNING = {
     [0, 0, 0],
     [0.003, 0.005, 0.003],
     [0.007, 0.014, 0.007],
-    [0.018, 0.045, 0.018],
-    [0.062, 0.135, 0.062],
+    [0.021, 0.052, 0.021],
+    [0.072, 0.155, 0.072],
   ] as readonly (readonly number[])[],
   penaltyXg: 0.76,
   keeperSlope: 0.006,
@@ -88,8 +95,8 @@ export const TUNING = {
     counter: {
       shot: 1,
       dribble: 1.1,
-      longBall: 1.8,
-      forward: 0.55,
+      longBall: 1.4,
+      forward: 0.5,
       stamina: 1,
       xgAgainst: 1,
       cards: 1,

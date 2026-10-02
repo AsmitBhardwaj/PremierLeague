@@ -1,9 +1,13 @@
 // Simulates many matches and prints headline numbers to tune packages/engine/src/tuning.ts.
 // Run with: pnpm --filter @pl/scripts calibrate
 import { createRng, createSyntheticTeam, simulateMatch, type Tactic } from '@pl/engine';
+import { DistributionStats } from './lib/distribution';
 
 const MATCHES = 1000;
-const STRONG_GAP = 8;
+const STRONG_GAP = 6;
+// Roughly the spread of the real clubs' starting XIs (see calibrate-season).
+const STRENGTH_MIN = 58;
+const STRENGTH_RANGE = 14;
 const TACTICS: Tactic[] = [
   'balanced',
   'balanced',
@@ -27,12 +31,12 @@ let shots = 0;
 let cards = 0;
 let reds = 0;
 let injuries = 0;
-const goalDist = new Map<number, number>();
+const dist = new DistributionStats();
 
 const started = Date.now();
 for (let i = 0; i < MATCHES; i++) {
-  const hs = 55 + rng() * 20;
-  const as = 55 + rng() * 20;
+  const hs = STRENGTH_MIN + rng() * STRENGTH_RANGE;
+  const as = STRENGTH_MIN + rng() * STRENGTH_RANGE;
   const home = createSyntheticTeam({
     id: 'h',
     strength: hs,
@@ -49,7 +53,7 @@ for (let i = 0; i < MATCHES; i++) {
 
   const total = r.score.home + r.score.away;
   goals += total;
-  goalDist.set(Math.min(total, 7), (goalDist.get(Math.min(total, 7)) ?? 0) + 1);
+  dist.add(r, 'h');
   if (r.score.home > r.score.away) homeWins++;
   else if (r.score.home === r.score.away) draws++;
   else awayWins++;
@@ -81,9 +85,17 @@ console.log(`Shots per game     ${(shots / MATCHES).toFixed(1)}`);
 console.log(
   `Yellows per game   ${(cards / MATCHES).toFixed(2)}   reds ${(reds / MATCHES).toFixed(3)}   injuries ${(injuries / MATCHES).toFixed(2)}`,
 );
-console.log('Total-goals distribution:');
-for (let g = 0; g <= 7; g++) {
-  console.log(
-    `  ${g === 7 ? '7+' : String(g).padStart(2)}  ${pct(goalDist.get(g) ?? 0).padStart(6)}`,
-  );
+dist.print('(match-level)', goals / MATCHES);
+
+// Control: identical teams and tactics. Any scoreline-state effect here is a genuine snowball,
+// unlike the table above where the stronger side is both more likely to lead and to score.
+const control = new DistributionStats();
+for (let i = 0; i < 2000; i++) {
+  const home = createSyntheticTeam({ id: 'h', strength: 65, seed: 3 });
+  const away = createSyntheticTeam({ id: 'a', strength: 65, seed: 4 });
+  control.add(simulateMatch({ home, away, seed: 50_000 + i }), 'h');
 }
+control.print(
+  '(control: 2000 matches, equal teams, balanced tactics)',
+  control.goals / control.matches,
+);

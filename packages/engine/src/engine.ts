@@ -351,7 +351,7 @@ export class Match {
     const col = this.zone.col;
     const tac = T.tactics[atk.tactic];
     const pos = actor.player.position;
-    const counter = atk.counterMode ? 1.4 : 1;
+    const counter = atk.counterMode ? T.counterShotBoost : 1;
 
     const shotW =
       (T.shotWeight[col] ?? 0) *
@@ -363,7 +363,7 @@ export class Match {
     const dribbleW =
       pos === 'GK' ? 0 : T.dribbleWeight * (0.4 + this.eff(actor, 'dribbling') / 100) * tac.dribble;
     const longW =
-      (T.longBallWeight[col] ?? 0) * tac.longBall * counter * (atk.counterMode ? 1.5 : 1);
+      (T.longBallWeight[col] ?? 0) * tac.longBall * (atk.counterMode ? T.counterLongBallBoost : 1);
     const passW = 1;
 
     const total = shotW + dribbleW + longW + passW;
@@ -697,7 +697,7 @@ export class Match {
     loser.counterMode = false;
     this.lastPasser = undefined;
     this.restart(winner.side, zone, who);
-    if (winner.tactic === 'counter' && zone.col <= 3) {
+    if (winner.tactic === 'counter' && zone.col <= T.counterTriggerMaxCol) {
       winner.counterMode = true;
       winner.counterSteps = 0;
     }
@@ -717,12 +717,18 @@ export class Match {
     if (long) {
       dCol = Math.min(ZONE_COLS - 1 - from.col, 2 + (this.rng() < 0.4 ? 1 : 0));
     } else {
-      const forward = T.tactics[atk.tactic].forward * (atk.counterMode ? 1.3 : 1);
+      const forward = T.tactics[atk.tactic].forward * (atk.counterMode ? T.counterForwardBoost : 1);
       const r = this.rng();
       if (r < forward) dCol = from.col < ZONE_COLS - 1 ? 1 : 0;
       else if (r < forward + (1 - forward) * 0.6) dCol = 0;
       else dCol = from.col > 0 ? -1 : 0;
-      if (atk.counterMode && dCol === 1 && this.rng() < 0.4 && from.col < ZONE_COLS - 2) dCol = 2;
+      if (
+        atk.counterMode &&
+        dCol === 1 &&
+        this.rng() < T.counterSkipColChance &&
+        from.col < ZONE_COLS - 2
+      )
+        dCol = 2;
     }
     const lane = this.rng() < 0.5 ? from.lane : this.shiftLane(from.lane);
     return { col: clamp(from.col + dCol, 0, ZONE_COLS - 1), lane };

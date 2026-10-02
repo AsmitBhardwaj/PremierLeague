@@ -7,7 +7,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "echo \"no tests in scripts\"",
     "hello": "tsx src/hello.ts",
-    "calibrate": "tsx src/calibrate.ts"
+    "calibrate": "tsx src/calibrate.ts",
+    "calibrate-season": "tsx src/calibrate-season.ts",
+    "fpl-sync": "tsx src/fpl-sync.ts"
   },
   "dependencies": {
     "@pl/engine": "workspace:*"

@@ -1,0 +1,39 @@
+# Premier League Club Builder
+
+## What it is
+
+Found a 21st Premier League club, build a squad on a budget, and play the season match by match with 2D highlights.
+
+## Tech stack
+
+- TypeScript (strict) in a pnpm workspaces monorepo
+- Next.js (App Router) for the web app
+- A UI-free match engine library, tested with Vitest
+- Node scripts run with tsx (calibration, FPL data sync)
+- Supabase (planned) for accounts and leaderboards
+- ESLint + Prettier, GitHub Actions CI
+
+## Repo structure
+
+```
+apps/web         Next.js app
+packages/engine  UI-free match engine (no DOM / Node APIs)
+scripts          Node scripts (calibration, FPL data sync), run via tsx
+```
+
+## Getting started
+
+```sh
+pnpm install
+cp .env.example .env.local   # fill in Supabase values
+pnpm dev                     # start the web app
+pnpm typecheck && pnpm lint && pnpm test
+```
+
+## Roadmap
+
+1. Match engine + calibration
+2. 2D highlight renderer
+3. Half-time decisions
+4. Season loop
+5. Accounts + leaderboards

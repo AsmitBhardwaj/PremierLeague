@@ -1,4 +1,4 @@
-// Precompute the fixtures that do not involve the user's club for every possible replacement.
+// Precompute fixtures that do not involve the user's club for each promoted-club replacement.
 // Usage: pnpm --filter @pl/scripts generate-season-background [seasons]
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -37,8 +37,8 @@ const average = (club: (typeof allClubs)[number]): number =>
 const defaultReplacedClubId = [...promoted].sort((a, b) => average(a) - average(b))[0]!.id;
 
 const replacements: Record<string, { clubs: typeof allClubs; pointsBase64: string }> = {};
-for (let replaced = 0; replaced < allClubs.length; replaced++) {
-  const replacedClub = allClubs[replaced]!;
+for (const replacedClub of promoted) {
+  const replaced = allClubs.findIndex((club) => club.id === replacedClub.id);
   const clubs = allClubs.filter((_, index) => index !== replaced);
   const points = new Uint8Array(SEASONS * clubs.length);
   const rng = createRng(SEED + replaced * 100_003);

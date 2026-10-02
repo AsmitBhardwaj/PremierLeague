@@ -31,7 +31,7 @@ for (let season = 0; season < CALIBRATION_SEASONS; season++) {
 }
 
 console.log(
-  `Event engine: ${CALIBRATION_SEASONS} seasons (${matchCount} matches); predictor: ${PREDICTION_SEASONS} seasons`,
+  `Event engine: ${CALIBRATION_SEASONS} seasons (${matchCount} matches); predictor: ${PREDICTION_SEASONS} seasons, replacing default promoted club`,
 );
 console.log('Club                Calibration  Prediction   Diff');
 const differences: number[] = [];
@@ -41,7 +41,6 @@ for (let index = 0; index < clubs.length; index++) {
   const prediction = predictSeason(club.team, {
     seasons: PREDICTION_SEASONS,
     seed: 1,
-    replacedClubId: club.team.id,
   }).meanPoints;
   const difference = prediction - calibration;
   const signedDifference = `${difference >= 0 ? '+' : ''}${difference.toFixed(1)}`;

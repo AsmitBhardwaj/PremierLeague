@@ -1,0 +1,861 @@
+:root {
+  --background: #08090a;
+  --surface: #0f1011;
+  --surface-2: #161718;
+  --raised: #1c1d1f;
+  --border: #232428;
+  --hairline: #1f2023;
+  --text: #f7f8f8;
+  --text-secondary: #c8ccd2;
+  --text-muted: #8a8f98;
+  --pitch: #123326;
+  --pitch-lines: #24573f;
+  --your-team: #f7f8f8;
+  --opponents: #6b6f76;
+  --warning: #e3a869;
+  --warning-background: #2a2117;
+  --page-width: 1180px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-barlow), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page-shell {
+  width: min(calc(100% - 48px), var(--page-width));
+  margin-inline: auto;
+}
+
+.site-header {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 75px 0 auto;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wordmark {
+  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 34px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.site-header nav a:hover {
+  color: var(--text);
+}
+
+.site-header > .button {
+  justify-self: end;
+}
+
+.button {
+  min-height: 48px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  border: 1px solid var(--text);
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.button span {
+  font-size: 13px;
+}
+
+.button-primary {
+  background: var(--text);
+  color: var(--background);
+}
+
+.button-primary:hover {
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+.button-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.button-secondary:hover {
+  background: var(--surface-2);
+  border-color: var(--text-muted);
+}
+
+.button-small {
+  min-height: 38px;
+  padding-inline: 15px;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.section {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.hero {
+  overflow: hidden;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(48px, 7vw, 112px);
+  align-items: center;
+}
+
+.hero-grid {
+  min-height: 690px;
+  padding-block: 86px;
+}
+
+.eyebrow,
+.card-kicker,
+.label {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+.primary-prediction strong,
+.stat strong {
+  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+}
+
+.hero h1 {
+  max-width: 680px;
+  margin: 24px 0 24px;
+  font-size: clamp(66px, 7.1vw, 112px);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.84;
+  text-transform: uppercase;
+}
+
+.hero-lede {
+  max-width: 590px;
+  margin-bottom: 34px;
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-note {
+  margin: 18px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.prediction-card {
+  position: relative;
+  padding: 28px;
+  box-shadow: 0 28px 80px rgb(0 0 0 / 28%);
+}
+
+.prediction-card::before,
+.prediction-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border: 1px solid var(--hairline);
+}
+
+.prediction-card::before {
+  inset: -18px 18px 18px -18px;
+}
+
+.prediction-card::after {
+  inset: 18px -18px -18px 18px;
+}
+
+.prediction-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prediction-header h2 {
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.live-chip {
+  padding: 7px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.primary-prediction {
+  padding: 26px 0 24px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.primary-prediction .label {
+  grid-column: 1 / -1;
+}
+
+.primary-prediction strong {
+  font-size: 78px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.primary-prediction > span:last-child {
+  padding-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.prediction-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--border);
+}
+
+.stat {
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-right: 1px solid var(--border);
+}
+
+.stat:first-child {
+  padding-left: 0;
+}
+
+.stat:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.stat span {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.stat strong {
+  font-size: 27px;
+  font-weight: 600;
+}
+
+.histogram {
+  height: 84px;
+  margin-top: 28px;
+  display: flex;
+  gap: 3px;
+  align-items: end;
+}
+
+.histogram span {
+  min-width: 3px;
+  flex: 1;
+  background: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.chart-labels {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.model-note {
+  margin: 22px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.section:not(.hero) > .page-shell,
+.feature-grid,
+.league-grid {
+  padding-block: 112px;
+}
+
+.section-heading {
+  max-width: 700px;
+}
+
+.section-heading h2,
+.final-cta h2 {
+  margin: 18px 0 20px;
+  font-size: clamp(44px, 5vw, 70px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.section-heading > p:last-child,
+.final-cta .cta-inner > p:not(.eyebrow) {
+  max-width: 590px;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.steps-grid {
+  margin-top: 64px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--hairline);
+}
+
+.step {
+  min-height: 250px;
+  padding: 28px 34px 30px 0;
+  border-right: 1px solid var(--hairline);
+}
+
+.step:not(:first-child) {
+  padding-left: 34px;
+}
+
+.step:last-child {
+  border-right: 0;
+}
+
+.step > span {
+  color: var(--text-muted);
+  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+  font-size: 13px;
+}
+
+.step h3 {
+  margin: 76px 0 12px;
+  font-size: 26px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.step p {
+  margin-bottom: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.feature-list {
+  margin: 34px 0 32px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+
+.feature-list li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.feature-list li::before {
+  content: '—';
+  margin-right: 12px;
+  color: var(--text-muted);
+}
+
+.pitch-frame {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.scoreboard {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.scoreboard span:nth-of-type(2) {
+  text-align: left;
+}
+
+.scoreboard strong {
+  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+  font-size: 23px;
+}
+
+.scoreboard time {
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.pitch {
+  width: 100%;
+  aspect-ratio: 1.45;
+  display: block;
+  background: var(--pitch);
+}
+
+.pitch > rect,
+.pitch > path,
+.pitch > circle:not(.home-player, .away-player, .ball, .pitch-fill) {
+  fill: none;
+  stroke: var(--pitch-lines);
+  stroke-width: 0.6;
+}
+
+.pitch-fill,
+.ball {
+  fill: var(--text);
+}
+
+.home-player {
+  fill: var(--your-team);
+}
+
+.away-player {
+  fill: var(--opponents);
+  stroke: #898d93;
+  stroke-width: 0.3;
+}
+
+.ball-path {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 0.45;
+  stroke-dasharray: 1 1;
+  opacity: 0.7;
+}
+
+.match-event {
+  margin-top: 12px;
+  padding: 13px 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--surface-2);
+}
+
+.match-event > span {
+  color: var(--text-muted);
+  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+  font-size: 22px;
+}
+
+.match-event strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.match-event p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.league-grid {
+  align-items: start;
+}
+
+.league-grid .section-heading {
+  margin-bottom: 32px;
+}
+
+.table-card {
+  overflow: hidden;
+}
+
+.table-row {
+  min-height: 58px;
+  padding-inline: 20px;
+  display: grid;
+  grid-template-columns: 40px 1fr repeat(4, 38px);
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: right;
+}
+
+.table-row span:nth-child(2) {
+  text-align: left;
+}
+
+.table-head {
+  min-height: 42px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table-row.your-club {
+  background: var(--raised);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.table-row.your-club span:nth-child(2)::after {
+  content: 'Your club';
+  margin-left: 10px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table-caption {
+  margin: 0;
+  padding: 16px 20px;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.final-cta {
+  text-align: center;
+}
+
+.cta-inner {
+  padding-block: 126px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.final-cta h2 {
+  max-width: 820px;
+}
+
+.final-cta .button {
+  margin-top: 20px;
+}
+
+.site-footer {
+  color: var(--text-muted);
+}
+
+.footer-inner {
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 24px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.footer-inner p {
+  margin: 0;
+}
+
+.footer-inner > span:last-child {
+  justify-self: end;
+}
+
+.coming-soon {
+  min-height: 100vh;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.coming-soon h1 {
+  margin: 18px 0 8px;
+  font-size: clamp(64px, 10vw, 120px);
+  font-weight: 600;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.coming-soon > p:not(.eyebrow) {
+  margin-bottom: 30px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .site-header {
+    grid-template-columns: 1fr auto;
+  }
+
+  .site-header nav {
+    display: none;
+  }
+
+  .hero-grid {
+    gap: 46px;
+  }
+
+  .hero h1 {
+    font-size: clamp(58px, 9vw, 78px);
+  }
+
+  .primary-prediction strong {
+    font-size: 64px;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-shell {
+    width: min(calc(100% - 32px), var(--page-width));
+  }
+
+  .site-header {
+    min-height: 66px;
+  }
+
+  .site-header::before {
+    inset-block-start: 65px;
+  }
+
+  .site-header .button {
+    min-height: 34px;
+    padding-inline: 11px;
+  }
+
+  .site-header .button span {
+    display: none;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-grid {
+    min-height: auto;
+    padding-block: 66px 76px;
+  }
+
+  .hero h1 {
+    margin-top: 20px;
+    font-size: clamp(57px, 18vw, 74px);
+  }
+
+  .hero-lede {
+    font-size: 16px;
+  }
+
+  .prediction-card {
+    padding: 22px;
+  }
+
+  .prediction-card::before,
+  .prediction-card::after {
+    display: none;
+  }
+
+  .primary-prediction strong {
+    font-size: 68px;
+  }
+
+  .section:not(.hero) > .page-shell,
+  .feature-grid,
+  .league-grid {
+    padding-block: 76px;
+  }
+
+  .section-heading h2,
+  .final-cta h2 {
+    font-size: 46px;
+  }
+
+  .steps-grid {
+    grid-template-columns: 1fr;
+    margin-top: 44px;
+  }
+
+  .step,
+  .step:not(:first-child) {
+    min-height: auto;
+    padding: 24px 0 26px;
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .step:last-child {
+    border-bottom: 0;
+  }
+
+  .step h3 {
+    margin: 34px 0 9px;
+  }
+
+  .feature-grid,
+  .league-grid {
+    gap: 54px;
+  }
+
+  .pitch-frame {
+    padding: 12px;
+  }
+
+  .table-row {
+    grid-template-columns: 34px 1fr repeat(4, 29px);
+    padding-inline: 13px;
+    font-size: 12px;
+  }
+
+  .table-row.your-club span:nth-child(2)::after {
+    display: none;
+  }
+
+  .cta-inner {
+    padding-block: 86px;
+  }
+
+  .footer-inner {
+    min-height: auto;
+    padding-block: 40px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .footer-inner > span:last-child {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero h1 {
+    font-size: 58px;
+  }
+
+  .button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .button-row .button {
+    padding-inline: 12px;
+    gap: 10px;
+  }
+
+  .prediction-header {
+    align-items: center;
+  }
+
+  .live-chip {
+    max-width: 92px;
+    overflow: hidden;
+  }
+
+  .primary-prediction {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .primary-prediction > span:last-child {
+    padding-bottom: 0;
+  }
+
+  .stat {
+    padding-inline: 8px;
+  }
+
+  .stat strong {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button {
+    transition: none;
+  }
+}

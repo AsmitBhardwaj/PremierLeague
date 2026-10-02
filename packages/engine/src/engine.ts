@@ -502,7 +502,7 @@ export class Match {
         : `${fouler.player.name} commits a foul on ${victim.player.name}.`,
     );
 
-    const cardMult = T.tactics[def.tactic].cards;
+    const cardMult = T.tactics[def.tactic].cards * (fouler.yellow > 0 ? T.secondYellowFactor : 1);
     const roll = this.rng();
     if (roll < T.redGivenFoul) {
       this.sendOff(def, fouler, at, 'Straight red card');

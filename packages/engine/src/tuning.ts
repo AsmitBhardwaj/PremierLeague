@@ -59,8 +59,10 @@ export const TUNING = {
   foulOnLostDuel: 0.2,
   backgroundFoul: 0.03,
   penaltyShare: { central: 0.28, wide: 0.1 },
-  yellowGivenFoul: 0.11,
-  redGivenFoul: 0.0015,
+  yellowGivenFoul: 0.14,
+  /** Referees are slower to book a player who already has a yellow. */
+  secondYellowFactor: 0.25,
+  redGivenFoul: 0.001,
   injuryPerStep: 0.0005,
   maxSubstitutions: 5,
 

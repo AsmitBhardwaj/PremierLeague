@@ -5,6 +5,7 @@ import { buildClubs, simulateMatch } from '@pl/engine';
 import { DistributionStats } from './lib/distribution';
 import { loadFplCache } from './lib/fpl-cache';
 import { fplNameOf, loadLastSeasonTable } from './lib/last-season-table';
+import { forecastFplName, loadPreseasonForecast } from './lib/preseason-forecast';
 import { buildTeamBenchmark, spearman } from './lib/team-benchmark';
 
 const SEASONS = Number(process.argv[2] ?? 200);
@@ -142,8 +143,38 @@ const promoted = clubs.flatMap((c, i) =>
     : [`${c.team.name} ${(acc[i]!.points / SEASONS).toFixed(1)}`],
 );
 console.log(`Promoted clubs (sim avg pts): ${promoted.join(', ')}`);
+
+// Check-only: a published pre-season forecast for these (current) squads. Never tuned against.
+const forecast = loadPreseasonForecast();
+const vsForecast = clubs.map((c, i) => ({
+  name: c.team.name,
+  sim: acc[i]!.points / SEASONS,
+  f: forecast.find((r) => forecastFplName(r.club) === c.team.name)!,
+}));
+console.log(
+  '\nSimulated avg points vs Opta pre-season forecast, 2026/27 (check only, not tuned against)',
+);
+console.log('Club                Sim pts  Fcst pts  Sim pos  Fcst pos');
+const simPos = new Map(
+  [...vsForecast].sort((p, q) => q.sim - p.sim).map((x, i) => [x.name, i + 1] as const),
+);
+for (const x of [...vsForecast].sort((p, q) => p.f.position - q.f.position)) {
+  console.log(
+    `${x.name.padEnd(18)} ${x.sim.toFixed(1).padStart(8)} ${x.f.expectedPoints.toFixed(1).padStart(9)} ` +
+      `${String(simPos.get(x.name)).padStart(8)} ${String(x.f.position).padStart(9)}`,
+  );
+}
+console.log(
+  `Spearman vs pre-season forecast: ${spearman(
+    vsForecast.map((x) => x.sim),
+    vsForecast.map((x) => x.f.expectedPoints),
+  ).toFixed(3)}  (all ${vsForecast.length} clubs)`,
+);
 const fav = Math.max(...acc.map((a) => a.titles));
-console.log(`Favourite's title probability: ${pct(fav)}   (target 45-65%)`);
+console.log(`\nFavourite's title probability: ${pct(fav)}   (target 45-65%)`);
+console.log(
+  `Highest relegation rate: ${pct(Math.max(...acc.map((a) => a.relegated)))}   (target <= ~85-90%)`,
+);
 
 // FPL-derived benchmark. Context-biased, for reference only: it is built from the same FPL stats
 // as the ratings, so it cannot judge whether removing their team-context bias helped.

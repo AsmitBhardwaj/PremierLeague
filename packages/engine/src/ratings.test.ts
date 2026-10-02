@@ -106,9 +106,9 @@ describe('FPL rating mapping', () => {
 
   it('rates a player with no top-flight history below an identical proven one', () => {
     const { bootstrap, summaries } = fixture();
-    const output = { xg: 0.2, goals: 0.2 };
-    const unproven = element(3, 4, season(300, output));
-    const proven = element(3, 4, season(300, output));
+    const output = { xg: 0.4, goals: 0.4 };
+    const unproven = element(3, 4, season(450, output));
+    const proven = element(3, 4, season(450, output));
     bootstrap.elements.push(unproven, proven);
     summaries.set(proven.id, { history_past: [season(2400, output), season(2400, output)] });
     const rated = rateAll(toRatingInputs(bootstrap, summaries));

@@ -148,7 +148,7 @@ export const RATING_MAP = {
    * shrinkage target sits `unprovenPriorZ` standard deviations below the positional mean. The
    * discount fades linearly to nothing as his earlier-seasons minutes reach `provenMinutes`.
    */
-  unprovenPriorZ: 0.5,
+  unprovenPriorZ: 0.25,
   provenMinutes: 1800,
   /** Weighted minutes a player needs to count towards the positional norms. */
   normMinMinutes: 900,
@@ -170,7 +170,7 @@ export const RATING_MAP = {
    */
   knee: 0.7,
   belowKneeSlope: 2,
-  aboveKneeSlope: 0.15,
+  aboveKneeSlope: 0.22,
   /** Weighted minutes at which a player's rating may reach the full +/- maxZ standard deviations. */
   fullEvidenceMinutes: 1800,
   /** Rating points per 1.0 of (minutes/3000 - 0.5): regulars are trusted slightly more. */

@@ -1,0 +1,112 @@
+{
+  "season": "2026/27",
+  "kind": "pre-season forecast (Opta supercomputer expected points, published before opening weekend)",
+  "sources": [
+    "https://www.si.com/soccer/supercomputer-predicts-premier-league-table-2026-27-opening-weekend"
+  ],
+  "corroboration": "Opta's own pre-season article (https://theanalyst.com/articles/premier-league-predictions-2026-27-opta-supercomputer, 14 Aug 2026) gives only title, top-5 and relegation percentages, but their ordering agrees with this table at every position that article ranks (Hull, Ipswich, Coventry, Sunderland, Fulham/Leeds tied, Palace, Forest, Brentford, Everton, Bournemouth by relegation %; Arsenal..Brighton by title/top-5 %).",
+  "retrieved": "2026-10-03",
+  "note": "Check-only benchmark: never tune against it. A later Opta update (26 Sep 2026, after ~5 matches) exists but includes results, so it is not used.",
+  "table": [
+    {
+      "position": 1,
+      "club": "Arsenal",
+      "expectedPoints": 73.45
+    },
+    {
+      "position": 2,
+      "club": "Man City",
+      "expectedPoints": 67.01
+    },
+    {
+      "position": 3,
+      "club": "Liverpool",
+      "expectedPoints": 61.49
+    },
+    {
+      "position": 4,
+      "club": "Man Utd",
+      "expectedPoints": 59.03
+    },
+    {
+      "position": 5,
+      "club": "Aston Villa",
+      "expectedPoints": 56.7
+    },
+    {
+      "position": 6,
+      "club": "Chelsea",
+      "expectedPoints": 55.73
+    },
+    {
+      "position": 7,
+      "club": "Newcastle",
+      "expectedPoints": 53.62
+    },
+    {
+      "position": 8,
+      "club": "Tottenham",
+      "expectedPoints": 53.02
+    },
+    {
+      "position": 9,
+      "club": "Brighton",
+      "expectedPoints": 52.1
+    },
+    {
+      "position": 10,
+      "club": "Bournemouth",
+      "expectedPoints": 50.87
+    },
+    {
+      "position": 11,
+      "club": "Everton",
+      "expectedPoints": 50.29
+    },
+    {
+      "position": 12,
+      "club": "Brentford",
+      "expectedPoints": 48.86
+    },
+    {
+      "position": 13,
+      "club": "Nott'm Forest",
+      "expectedPoints": 48.08
+    },
+    {
+      "position": 14,
+      "club": "Crystal Palace",
+      "expectedPoints": 47.54
+    },
+    {
+      "position": 15,
+      "club": "Leeds",
+      "expectedPoints": 46.67
+    },
+    {
+      "position": 16,
+      "club": "Fulham",
+      "expectedPoints": 45.7
+    },
+    {
+      "position": 17,
+      "club": "Sunderland",
+      "expectedPoints": 45.35
+    },
+    {
+      "position": 18,
+      "club": "Coventry",
+      "expectedPoints": 44.48
+    },
+    {
+      "position": 19,
+      "club": "Ipswich",
+      "expectedPoints": 43.58
+    },
+    {
+      "position": 20,
+      "club": "Hull",
+      "expectedPoints": 40.18
+    }
+  ]
+}

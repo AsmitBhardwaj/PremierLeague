@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "ratingCenter": 65,
+  "ratingScale": 10,
+  "featureNames": [
+    "intercept",
+    "isHome",
+    "ownAttack",
+    "ownMidfield",
+    "ownDefence",
+    "ownKeeper",
+    "ownBenchDepth",
+    "opponentAttack",
+    "opponentMidfield",
+    "opponentDefence",
+    "opponentKeeper",
+    "opponentBenchDepth",
+    "ownAttackSquared",
+    "ownMidfieldSquared",
+    "ownDefenceSquared",
+    "ownKeeperSquared",
+    "ownBenchDepthSquared",
+    "opponentAttackSquared",
+    "opponentMidfieldSquared",
+    "opponentDefenceSquared",
+    "opponentKeeperSquared",
+    "opponentBenchDepthSquared"
+  ],
+  "coefficients": [
+    0.18410011701139326, 0.21222129783520982, 0.16109199817220782, 0.31707136252625484,
+    0.024075774624907956, 0.11378154297387506, -0.0009243693962550421, 0.07426782667743442,
+    -0.29996427055236247, -0.03878975786300005, -0.10908741482606749, -0.08351142625683688,
+    -0.03207470889697513, -0.027327752003440682, 0.07548123231447104, -0.02989062431340845,
+    -0.021605447448842206, -0.0901607883406829, -0.012697042815419635, 0.05624138347577752,
+    0.011476086183029248, 0.015495005131163055
+  ],
+  "trainingMatches": 18330
+}

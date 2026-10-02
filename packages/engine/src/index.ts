@@ -5,3 +5,4 @@ export { createSyntheticTeam, type SyntheticTeamOptions } from './synthetic';
 export { TUNING } from './tuning';
 export * from './ratings';
 export { buildClubs, pickSquad, overall, BENCH_SIZE, type Club } from './squads';
+export * from './predict';

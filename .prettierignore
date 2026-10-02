@@ -3,3 +3,4 @@ node_modules
 pnpm-lock.yaml
 coverage
 data-cache
+packages/engine/src/predict/data/season-background.json

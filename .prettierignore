@@ -5,3 +5,4 @@ coverage
 data-cache
 packages/engine/src/predict/data/season-background.json
 /PRODUCT_PLAN.md
+apps/web/public/landing-match.json

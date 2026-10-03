@@ -13,6 +13,7 @@
     "generate-season-background": "tsx src/generate-season-background.ts",
     "generate-web-player-data": "tsx src/generate-web-player-data.ts",
     "generate-landing-sample": "tsx src/generate-landing-sample.ts",
+    "generate-landing-match": "tsx src/generate-landing-match.ts",
     "sanity-predict-season": "tsx src/sanity-predict-season.ts",
     "benchmark-predict-season": "tsx src/benchmark-predict-season.ts",
     "fpl-sync": "tsx src/fpl-sync.ts",

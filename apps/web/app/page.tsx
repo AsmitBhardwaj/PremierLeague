@@ -1,3 +1,4 @@
+import { HeroMatch } from './components/HeroMatch';
 import sampleData from './data/landing-sample.json';
 import playerData from './play/data/players.json';
 import {
@@ -11,6 +12,8 @@ import {
 export const dynamic = 'force-static';
 
 const { club: sampleClub, prediction: samplePrediction } = sampleData;
+/** The opponent in the checked-in sample match (see scripts/src/generate-landing-match.ts). */
+const landingAwayName = 'Brighton';
 const likelyPosition = samplePrediction.positionDistribution.reduce((best, row) =>
   row.probability > best.probability ? row : best,
 ).position;
@@ -56,9 +59,8 @@ const careerSteps = [
   },
   {
     title: 'Play every match',
-    text: 'Watch matches and make half-time changes.',
+    text: 'Watch 20-second matches and make half-time changes.',
     accent: 'fwd',
-    soon: true,
   },
 ] as const;
 
@@ -75,9 +77,9 @@ function Arrow() {
   return <span aria-hidden="true">→</span>;
 }
 
-function ForecastHistogram({ compact = false }: { compact?: boolean }) {
+function ForecastHistogram() {
   return (
-    <div className={`forecast-histogram ${compact ? 'compact' : ''}`}>
+    <div className="forecast-histogram">
       <div className="forecast-bars" aria-label="How the points of a season could land">
         {samplePrediction.pointsDistribution.map((bin) => (
           <span
@@ -87,55 +89,6 @@ function ForecastHistogram({ compact = false }: { compact?: boolean }) {
             title={`${bin.min}–${bin.max} points: ${pct(bin.probability)}`}
           />
         ))}
-      </div>
-      {compact ? (
-        <div className="forecast-axis">
-          <span>Fewer points</span>
-          <span>Possible seasons</span>
-          <span>More points</span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function StudioScreen() {
-  return (
-    <div className="studio-screen">
-      <div className="studio-screen-bar">
-        <span>Season preview</span>
-        <span>Sample club</span>
-      </div>
-      <div className="studio-screen-body">
-        <div className="studio-club-line">
-          <div>
-            <h2>{sampleClub.name}</h2>
-            <p>{sampleClub.formation} · Sample squad</p>
-          </div>
-          <div className="studio-points">
-            <strong>{samplePrediction.meanPoints.toFixed(1)}</strong>
-            <span>Avg points</span>
-          </div>
-        </div>
-        <div className="studio-chips">
-          <div className="finish-chip">
-            <span>Finish</span>
-            <strong>{ordinal(likelyPosition)}</strong>
-          </div>
-          <div>
-            <span>Title</span>
-            <strong>{pct(samplePrediction.titleProbability)}</strong>
-          </div>
-          <div className="top-four-chip">
-            <span>Top 4</span>
-            <strong>{pct(samplePrediction.top4Probability)}</strong>
-          </div>
-          <div>
-            <span>Releg.</span>
-            <strong>{pct(samplePrediction.relegationProbability)}</strong>
-          </div>
-        </div>
-        <ForecastHistogram compact />
       </div>
     </div>
   );
@@ -241,22 +194,31 @@ function AnalysisForecast() {
   );
 }
 
-// Deliberately static: this reserves the match-viewer space until that experience is available.
-function MatchHighlightsPlaceholder() {
+const matchdayFeatures = [
+  { title: 'Pick your XI', text: 'Choose a formation and swap players into your best eleven.' },
+  {
+    title: 'Set tactics',
+    text: 'Balanced, high press, counter or defensive, each with a real trade-off.',
+  },
+  { title: '20-second matches', text: 'Highlights, text commentary or an instant result.' },
+  {
+    title: 'Half-time changes',
+    text: 'Make substitutions and switch tactic before the second half.',
+  },
+] as const;
+
+function MatchdayFeatures() {
   return (
-    <div className="match-tv" aria-label="Match highlights preview">
-      <div className="match-tv-pitch">
-        <span className="tv-halfway" />
-        <span className="tv-circle" />
-        <span className="tv-box left" />
-        <span className="tv-box right" />
-        <div className="score-bug">
-          <strong>Your club</strong>
-          <span>KO</span>
-          <strong>Opponent</strong>
-        </div>
-        <div className="tv-caption">Match highlights arrive soon</div>
-      </div>
+    <div className="matchday-board">
+      <ol className="matchday-features">
+        {matchdayFeatures.map((feature, index) => (
+          <li key={feature.title}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h3>{feature.title}</h3>
+            <p>{feature.text}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -303,7 +265,7 @@ export default function Home() {
               <li>Plays on your phone</li>
             </ul>
           </div>
-          <StudioScreen />
+          <HeroMatch homeName={sampleClub.name} awayName={landingAwayName} />
         </div>
         <div className="hero-lower-third page-shell">
           <div>
@@ -336,7 +298,6 @@ export default function Home() {
                 <span className="step-number">{String(index + 1).padStart(2, '0')}</span>
                 <h3>{step.title}</h3>
                 <p>{step.text}</p>
-                {'soon' in step ? <span className="step-soon">Coming soon</span> : null}
               </li>
             ))}
           </ol>
@@ -420,15 +381,17 @@ export default function Home() {
       <section className="coming-section" id="highlights">
         <div className="page-shell coming-layout">
           <div>
-            <span className="segment-tag coming-tag">Coming up</span>
+            <span className="segment-tag coming-tag">Highlights</span>
             <h2>Watch every match.</h2>
             <p>
               Pick your XI, set your tactics, and watch each match play out in 20 seconds. Make your
-              changes at half-time.
+              changes at half-time, then see it through to full time.
             </p>
-            <span className="coming-soon">Coming soon</span>
+            <a className="button button-primary button-default" href="/play">
+              Play your first match <Arrow />
+            </a>
           </div>
-          <MatchHighlightsPlaceholder />
+          <MatchdayFeatures />
         </div>
       </section>
 

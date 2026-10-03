@@ -1,4 +1,9 @@
-import type { MatchEvent, Point, Side, Team } from '@pl/engine';
+import type { MatchEvent, Player, Point, Side, Team } from '@pl/engine';
+
+/** The parts of a team the renderer needs. A full engine `Team` satisfies it. */
+export type LineupTeam = Pick<Team, 'id' | 'name' | 'formation'> & {
+  players: Pick<Player, 'id' | 'name' | 'position'>[];
+};
 
 export type PlaybackMode = 'highlights' | 'commentary' | 'instant';
 
@@ -200,7 +205,7 @@ export interface ActivePlayer {
 }
 
 /** Who is on the pitch after `events`: starters, minus red cards and injuries, plus substitutes. */
-export function activePlayers(team: Team, events: readonly MatchEvent[]): ActivePlayer[] {
+export function activePlayers(team: LineupTeam, events: readonly MatchEvent[]): ActivePlayer[] {
   const slotOf = new Map<string, number>(team.players.map((player, slot) => [player.id, slot]));
   const active = new Set(team.players.map((player) => player.id));
   for (const event of events) {
@@ -220,7 +225,7 @@ export function activePlayers(team: Team, events: readonly MatchEvent[]): Active
 const LINE_X = { GK: 6, DEF: 25, MID: 45, FWD: 64 } as const;
 
 /** Resting positions (metres) for a side's starting XI. Home attacks towards x = 105. */
-export function formationAnchors(team: Team, side: Side): Point[] {
+export function formationAnchors(team: LineupTeam, side: Side): Point[] {
   const lines = {
     GK: [] as number[],
     DEF: [] as number[],
@@ -262,4 +267,29 @@ export function offBallTarget(
     x: clamp(anchor.x + (ball.x - 52.5) * follow + (isKeeper ? 0 : push * direction), 2, 103),
     y: clamp(anchor.y + (ball.y - 34) * (isKeeper ? 0.1 : 0.18), 2, 66),
   };
+}
+
+/** Entries that raise an on-pitch banner, in order. */
+export function bannerEntriesOf(schedule: Schedule): { entry: ScheduleEntry; index: number }[] {
+  return schedule.entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => bannerFor(entry) !== null);
+}
+
+const BANNER_LINGER_MS = 700;
+
+/** The banner to show at `timeMs`: the latest banner moment, until its hold plus a short linger ends. */
+export function bannerAt(
+  banners: readonly { entry: ScheduleEntry; index: number }[],
+  timeMs: number,
+): (Banner & { key: number }) | null {
+  for (let i = banners.length - 1; i >= 0; i--) {
+    const { entry, index } = banners[i]!;
+    if (entry.startMs <= timeMs) {
+      return timeMs <= entry.startMs + entry.holdMs + BANNER_LINGER_MS
+        ? { ...bannerFor(entry)!, key: index }
+        : null;
+    }
+  }
+  return null;
 }

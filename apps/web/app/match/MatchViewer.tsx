@@ -1,19 +1,18 @@
 'use client';
 
-import type { MatchEvent, Point, Side, Team } from '@pl/engine';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { drawPitch, type PitchDot } from './components/pitchDraw';
+import type { MatchEvent, Side, Team } from '@pl/engine';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useHighlightsPitch } from './components/useHighlightsPitch';
 import { userDotColour } from './lib/colours';
 import {
-  activePlayers,
+  bannerAt,
+  bannerEntriesOf,
   bannerFor,
   buildSchedule,
-  formationAnchors,
   formatClock,
   frameAt,
   isFeedKind,
   isGoal,
-  offBallTarget,
   scoreAt,
   type Banner,
   type PlaybackMode,
@@ -25,7 +24,6 @@ export const MODES: { id: PlaybackMode; label: string }[] = [
   { id: 'instant', label: 'Instant result' },
 ];
 
-const BANNER_LINGER_MS = 700;
 const FEED_TAGS: Record<string, string> = {
   goal: 'Goal',
   big_chance: 'Chance',
@@ -49,11 +47,6 @@ export interface ViewerSides {
   awayLabel: string;
   userSide: Side;
   userColour: string;
-}
-
-interface Dot {
-  x: number;
-  y: number;
 }
 
 interface Ui {
@@ -88,13 +81,7 @@ export function MatchViewer({
   const { home, away, userSide } = sides;
   const halfEvents = useMemo(() => allEvents.slice(startIndex), [allEvents, startIndex]);
   const schedule = useMemo(() => buildSchedule(halfEvents), [halfEvents]);
-  const bannerEntries = useMemo(
-    () =>
-      schedule.entries
-        .map((entry, index) => ({ entry, index }))
-        .filter(({ entry }) => bannerFor(entry) !== null),
-    [schedule],
-  );
+  const bannerEntries = useMemo(() => bannerEntriesOf(schedule), [schedule]);
   const feedEntries = useMemo(
     () =>
       schedule.entries
@@ -108,122 +95,24 @@ export function MatchViewer({
   const doneRef = useRef(false);
   const [ui, setUi] = useState<Ui>({ revealed: 0, banner: null, paused: false });
   const [finished, setFinished] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  const anchors = useMemo(
-    () => ({ home: formationAnchors(home, 'home'), away: formationAnchors(away, 'away') }),
-    [home, away],
-  );
-
-  const scene = useRef({
-    dots: new Map<string, Dot>(),
-    ball: { x: 52.5, y: 34 } as Point,
-    holdFrom: { x: 52.5, y: 34 } as Point,
-    holdIndex: -1,
-    possession: null as Side | null,
-    revealed: -1,
-    actives: [] as { id: string; side: Side; slot: number; keeper: boolean }[],
+  const { wrapperRef, canvasRef, draw, reset } = useHighlightsPitch({
+    allEvents,
+    startIndex,
+    schedule,
+    home,
+    away,
+    userSide,
+    userColour: sides.userColour,
   });
-
-  const draw = useCallback(
-    (frame: ReturnType<typeof frameAt>, dt: number) => {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      const wrapper = wrapperRef.current;
-      if (!canvas || !ctx || !wrapper) return;
-      const cssWidth = wrapper.clientWidth;
-      const cssHeight = (cssWidth * 68) / 105;
-      const ratio = window.devicePixelRatio || 1;
-      if (canvas.width !== Math.round(cssWidth * ratio)) {
-        canvas.width = Math.round(cssWidth * ratio);
-        canvas.height = Math.round(cssHeight * ratio);
-      }
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-      const state = scene.current;
-      const entry = frame.index >= 0 ? schedule.entries[frame.index]! : null;
-      if (entry?.event.teamId) state.possession = entry.event.teamId === home.id ? 'home' : 'away';
-
-      // Ball: follows the engine's event positions. Animated moments travel start -> end.
-      if (frame.hold && entry) {
-        if (state.holdIndex !== frame.index) {
-          state.holdIndex = frame.index;
-          state.holdFrom = { ...state.ball };
-        }
-        const { start, end } = entry.event;
-        const p = frame.hold.progress;
-        if (p < 0.3) {
-          const u = p / 0.3;
-          state.ball = {
-            x: state.holdFrom.x + (start.x - state.holdFrom.x) * u,
-            y: state.holdFrom.y + (start.y - state.holdFrom.y) * u,
-          };
-        } else {
-          const u = 1 - (1 - (p - 0.3) / 0.7) ** 2;
-          state.ball = { x: start.x + (end.x - start.x) * u, y: start.y + (end.y - start.y) * u };
-        }
-      } else if (entry) {
-        state.holdIndex = -1;
-        const k = Math.min(1, dt * 0.012);
-        state.ball = {
-          x: state.ball.x + (entry.event.end.x - state.ball.x) * k,
-          y: state.ball.y + (entry.event.end.y - state.ball.y) * k,
-        };
-      }
-
-      if (state.revealed !== frame.revealed) {
-        state.revealed = frame.revealed;
-        const seen = allEvents.slice(0, startIndex + frame.revealed);
-        state.actives = (['home', 'away'] as const).flatMap((side) =>
-          activePlayers(side === 'home' ? home : away, seen).map(({ playerId, slot }) => ({
-            id: playerId,
-            side,
-            slot,
-            keeper: (side === 'home' ? home : away).players[slot]?.position === 'GK',
-          })),
-        );
-      }
-
-      const carrier = entry?.event.playerId ?? null;
-      const move = Math.min(1, dt * 0.015);
-      const dots: PitchDot[] = [];
-      for (const player of state.actives) {
-        const anchor = anchors[player.side][player.slot]!;
-        let target: Point = offBallTarget(
-          anchor,
-          player.side,
-          player.keeper,
-          state.ball,
-          state.possession,
-        );
-        if (carrier === player.id) target = frame.hold && entry ? entry.event.start : state.ball;
-        const dot = state.dots.get(player.id) ?? { x: anchor.x, y: anchor.y };
-        dot.x += (target.x - dot.x) * move;
-        dot.y += (target.y - dot.y) * move;
-        state.dots.set(player.id, dot);
-        dots.push({ id: player.id, x: dot.x, y: dot.y, user: player.side === userSide });
-      }
-      drawPitch(ctx, cssWidth, cssHeight, {
-        dots,
-        ball: state.ball,
-        highlight: frame.hold ? (entry?.event.playerId ?? null) : null,
-        userColour: userDotColour(sides.userColour),
-      });
-    },
-    [allEvents, anchors, home, schedule, sides.userColour, startIndex, userSide],
-  );
 
   useEffect(() => {
     timeRef.current = 0;
     doneRef.current = false;
     setFinished(false);
-    scene.current.revealed = -1;
-    scene.current.dots.clear();
-    scene.current.ball = { x: 52.5, y: 34 };
-    scene.current.holdIndex = -1;
+    reset();
     let raf = 0;
     let last = performance.now();
     let completeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -234,16 +123,7 @@ export function MatchViewer({
         timeRef.current = Math.min(schedule.totalMs, timeRef.current + dt);
       }
       const frame = frameAt(schedule, timeRef.current);
-      let banner: Ui['banner'] = null;
-      for (let i = bannerEntries.length - 1; i >= 0; i--) {
-        const { entry, index } = bannerEntries[i]!;
-        if (entry.startMs <= timeRef.current) {
-          if (timeRef.current <= entry.startMs + entry.holdMs + BANNER_LINGER_MS) {
-            banner = { ...bannerFor(entry)!, key: index };
-          }
-          break;
-        }
-      }
+      const banner: Ui['banner'] = bannerAt(bannerEntries, timeRef.current);
       setUi((previous) =>
         previous.revealed === frame.revealed &&
         previous.banner?.key === banner?.key &&
@@ -264,7 +144,7 @@ export function MatchViewer({
       cancelAnimationFrame(raf);
       if (completeTimer) clearTimeout(completeTimer);
     };
-  }, [schedule, bannerEntries, draw]);
+  }, [schedule, bannerEntries, draw, reset]);
 
   const seen = allEvents.slice(0, startIndex + ui.revealed);
   const score = scoreAt(seen, home.id);

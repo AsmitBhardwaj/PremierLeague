@@ -43,9 +43,7 @@ describe('Phase 3 squad rules', () => {
     const sameClub = squad.map((player, index) =>
       index < 4 ? { ...player, clubId: 'same', clubName: 'Same Club' } : player,
     );
-    expect(validateSquad(sameClub)).toContain(
-      'Select no more than three players from any real club.',
-    );
+    expect(validateSquad(sameClub)).toContain('Select no more than 3 players from any real club.');
     expect(
       validateSquad(squad.map((player) => ({ ...player, position: 'MID' as const }))),
     ).toContain('Select exactly 2 GK players.');
@@ -57,7 +55,7 @@ describe('Phase 3 squad rules', () => {
     )!.clubId;
     const clubPlayers = market.filter((player) => player.clubId === club).slice(0, 4);
     expect(assessSelection(clubPlayers[3]!, clubPlayers.slice(0, 3), market).message).toMatch(
-      /three players/,
+      /3 players/,
     );
 
     const inflated = market.map((player) => ({ ...player, price: 100 }));

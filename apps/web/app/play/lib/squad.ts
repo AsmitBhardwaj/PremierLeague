@@ -2,6 +2,7 @@ import type { Player, Position, Team } from '@pl/engine';
 
 export const SQUAD_BUDGET = 950;
 export const SQUAD_SIZE = 18;
+export const MAX_PER_REAL_CLUB = 3;
 export const POSITION_QUOTAS: Record<Position, number> = {
   GK: 2,
   DEF: 6,
@@ -67,7 +68,9 @@ export function validateSquad(players: readonly MarketPlayer[]): string[] {
     }
   }
   for (const [, count] of countBy(players, (player) => player.clubId)) {
-    if (count > 3) errors.push('Select no more than three players from any real club.');
+    if (count > MAX_PER_REAL_CLUB) {
+      errors.push(`Select no more than ${MAX_PER_REAL_CLUB} players from any real club.`);
+    }
   }
   if (players.some((player) => player.status === 'u')) {
     errors.push('Unavailable players cannot be selected.');
@@ -93,7 +96,7 @@ export function cheapestLegalCompletion(
   if (required.some((count) => count < 0)) return null;
 
   const clubCounts = countBy(selected, (player) => player.clubId);
-  if ([...clubCounts.values()].some((count) => count > 3)) return null;
+  if ([...clubCounts.values()].some((count) => count > MAX_PER_REAL_CLUB)) return null;
   const byClub = new Map<string, MarketPlayer[]>();
   for (const player of market) {
     if (player.status === 'u' || selectedIds.has(player.id)) continue;
@@ -104,7 +107,7 @@ export function cheapestLegalCompletion(
 
   let states = new Map<string, StateValue>([['0,0,0,0', { cost: 0, playerIds: [] }]]);
   for (const [clubId, clubPlayers] of byClub) {
-    const capacity = 3 - (clubCounts.get(clubId) ?? 0);
+    const capacity = MAX_PER_REAL_CLUB - (clubCounts.get(clubId) ?? 0);
     if (capacity <= 0) continue;
     const pools = POSITION_ORDER.map((position) =>
       clubPlayers
@@ -168,8 +171,11 @@ export function assessSelection(
   if (positionCounts(selected)[player.position] >= POSITION_QUOTAS[player.position]) {
     return { allowed: false, message: `Your ${player.position} quota is already full.` };
   }
-  if (selected.filter((item) => item.clubId === player.clubId).length >= 3) {
-    return { allowed: false, message: `You already have three players from ${player.clubName}.` };
+  if (selected.filter((item) => item.clubId === player.clubId).length >= MAX_PER_REAL_CLUB) {
+    return {
+      allowed: false,
+      message: `You already have ${MAX_PER_REAL_CLUB} players from ${player.clubName}.`,
+    };
   }
   const next = [...selected, player];
   const currentCost = squadCost(next);

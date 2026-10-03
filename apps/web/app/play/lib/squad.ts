@@ -224,6 +224,21 @@ export function validateFormation(
   return errors;
 }
 
+export function validateLineup(
+  squad: readonly MarketPlayer[],
+  starterIds: readonly string[],
+  formation: Formation,
+): string[] {
+  const errors = [...validateSquad(squad), ...validateFormation(squad, starterIds, formation)];
+  const starterSet = new Set(starterIds);
+  const bench = squad.filter((player) => !starterSet.has(player.id));
+  if (bench.length !== 7) errors.push('The substitutes bench must contain exactly seven players.');
+  if (starterIds.some((id) => !squad.some((player) => player.id === id))) {
+    errors.push('Every starter must belong to the selected squad.');
+  }
+  return [...new Set(errors)];
+}
+
 export function pickFormationXI(squad: readonly MarketPlayer[], formation: Formation): string[] {
   const shape = FORMATIONS[formation];
   const take = (position: Position, count: number) =>

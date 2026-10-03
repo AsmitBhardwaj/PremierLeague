@@ -19,42 +19,25 @@ import {
   positionCounts,
   squadCost,
   validateFormation,
+  validateLineup,
   validateSquad,
   type Formation,
   type MarketPlayer,
 } from './lib/squad';
-
-type Step = 'identity' | 'squad' | 'lineup' | 'prediction';
-type CrestShape = 'diamond' | 'shield' | 'roundel';
-
-interface ClubIdentity {
-  name: string;
-  shortName: string;
-  stadium: string;
-  primaryColor: string;
-  secondaryColor: string;
-  crestShape: CrestShape;
-}
-
-interface SavedFlow {
-  step: Step;
-  identity: ClubIdentity;
-  selectedIds: string[];
-  formation: Formation;
-  starterIds: string[];
-}
+import {
+  STORAGE_KEY,
+  emptyIdentity,
+  parseSavedFlow,
+  validateIdentity,
+  type ClubIdentity,
+  type CrestShape,
+  type SavedFlow,
+  type Step,
+} from './lib/persistence';
 
 const market = playerData as MarketPlayer[];
-const STORAGE_KEY = '21st-club-phase-3';
 const PREDICTION_SEED = 2103;
-const emptyIdentity: ClubIdentity = {
-  name: '',
-  shortName: '',
-  stadium: '',
-  primaryColor: '#f7f8f8',
-  secondaryColor: '#1c1d1f',
-  crestShape: 'shield',
-};
+const REPLACED_CLUB = { id: 'IPS', name: 'Ipswich Town' } as const;
 const stepOrder: Step[] = ['identity', 'squad', 'lineup', 'prediction'];
 const stepNames: Record<Step, string> = {
   identity: 'Found club',
@@ -71,6 +54,8 @@ const ordinal = (position: number) => {
   const endings = ['th', 'st', 'nd', 'rd'];
   return `${position}${endings[position % 10] ?? 'th'}`;
 };
+const statusLabel = (status: string) =>
+  ({ a: 'Available', d: 'Doubtful', i: 'Injured', s: 'Suspended' })[status] ?? status;
 
 function Crest({ identity, large = false }: { identity: ClubIdentity; large?: boolean }) {
   const clip =
@@ -94,9 +79,12 @@ function FlowHeader({ step, identity }: { step: Step; identity: ClubIdentity }) 
   const active = stepOrder.indexOf(step);
   return (
     <header className="builder-header page-shell">
-      <a className="wordmark" href="/">
-        21ST CLUB
-      </a>
+      <div className="builder-brand">
+        <a className="wordmark" href="/">
+          21ST CLUB
+        </a>
+        <span>Final Third</span>
+      </div>
       <ol className="builder-progress" aria-label="Club creation progress">
         {stepOrder.map((item, index) => (
           <li key={item} className={index === active ? 'active' : index < active ? 'complete' : ''}>
@@ -127,11 +115,7 @@ function IdentityStep({
     setIdentity({ ...identity, [key]: value });
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    const next: Record<string, string> = {};
-    if (!identity.name.trim()) next.name = 'Enter a club name.';
-    if (!/^[A-Za-z0-9]{2,4}$/.test(identity.shortName.trim()))
-      next.shortName = 'Use 2–4 letters or numbers.';
-    if (!identity.stadium.trim()) next.stadium = 'Enter a stadium name.';
+    const next = validateIdentity(identity);
     setErrors(next);
     if (Object.keys(next).length === 0) onContinue();
   };
@@ -139,9 +123,9 @@ function IdentityStep({
   return (
     <section className="builder-step page-shell">
       <SectionHeading
-        eyebrow="Step 01 · Club identity"
+        eyebrow="Final Third · Club registry · Step 01"
         title="Found your club"
-        copy="Create an original identity for the club taking the default promoted place in the 20-team league."
+        copy={`Create an original identity for the club replacing ${REPLACED_CLUB.name} in the 20-team league.`}
       />
       <form className="identity-grid" onSubmit={submit} noValidate>
         <Card className="identity-form-card">
@@ -243,7 +227,7 @@ function IdentityStep({
           <Crest identity={identity} large />
           <h2>{identity.name || 'Your club'}</h2>
           <p>{identity.stadium || 'Your stadium'}</p>
-          <span>Entering in place of the default promoted side</span>
+          <span>Entering in place of {REPLACED_CLUB.name}</span>
         </Card>
       </form>
     </section>
@@ -271,6 +255,14 @@ function SquadStep({
   const cost = squadCost(selected);
   const completion = useMemo(() => cheapestLegalCompletion(selected, market), [selected]);
   const errors = validateSquad(selected);
+  const clubUsage = useMemo(() => {
+    const usage = new Map<string, { name: string; count: number }>();
+    for (const player of selected) {
+      const current = usage.get(player.clubId);
+      usage.set(player.clubId, { name: player.clubName, count: (current?.count ?? 0) + 1 });
+    }
+    return [...usage.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [selected]);
   const clubs = useMemo(() => [...new Set(market.map((player) => player.clubName))].sort(), []);
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase();
@@ -314,11 +306,11 @@ function SquadStep({
   return (
     <section className="builder-step page-shell squad-step">
       <SectionHeading
-        eyebrow="Step 02 · Player market"
+        eyebrow="Final Third · Transfer desk · Step 02"
         title="Build your squad"
         copy="Sign exactly 18 real players. Every choice is checked against the budget, positional quotas and three-per-club rule."
       />
-      <div className="squad-summary" aria-label="Squad status">
+      <div className="squad-summary scorebug-strip" aria-label="Squad status">
         <Stat label="Players" value={`${selected.length}/18`} />
         {POSITION_ORDER.map((item) => (
           <Stat key={item} label={item} value={`${counts[item]}/${POSITION_QUOTAS[item]}`} />
@@ -330,6 +322,18 @@ function SquadStep({
           ? `${money(cost + completion.cost)} is the cheapest possible final cost from here.`
           : 'No legal completion is available from the current selection.'}
       </p>
+      <div className="club-usage" aria-label="Real club selection limits">
+        <span>Club limit</span>
+        {clubUsage.length ? (
+          clubUsage.map((item) => (
+            <span key={item.name} className={item.count === 3 ? 'at-limit' : ''}>
+              {item.name} <strong>{item.count}/3</strong>
+            </span>
+          ))
+        ) : (
+          <span>No players selected</span>
+        )}
+      </div>
       <div className="squad-layout">
         <Card className="market-card">
           <div className="market-filters">
@@ -383,8 +387,7 @@ function SquadStep({
                   <span className="player-name">
                     <strong>{player.name}</strong>
                     <small>
-                      {player.clubName} ·{' '}
-                      {player.status === 'a' ? 'Available' : `Status ${player.status}`}
+                      {player.clubName} · {statusLabel(player.status)}
                     </small>
                   </span>
                   <span className="player-rating">{player.overall}</span>
@@ -444,7 +447,10 @@ function SquadStep({
           ))}
         </Card>
       </div>
-      <div className={`validation-banner ${message ? 'visible' : ''}`} aria-live="polite">
+      <div
+        className={`validation-banner builder-lower-third ${message ? 'visible' : ''}`}
+        aria-live="polite"
+      >
         {message || 'Player selection updates will appear here.'}
       </div>
       <div className="step-actions">
@@ -503,6 +509,7 @@ function LineupStep({
   onContinue: () => void;
 }) {
   const [swapSource, setSwapSource] = useState<string | null>(null);
+  const [inspectedId, setInspectedId] = useState(starterIds[0] ?? squad[0]?.id ?? '');
   const [message, setMessage] = useState(
     'Choose a starter, then a same-position substitute to swap.',
   );
@@ -511,10 +518,13 @@ function LineupStep({
     .map((id) => squad.find((player) => player.id === id)!)
     .filter(Boolean);
   const bench = squad.filter((player) => !starterSet.has(player.id));
-  const errors = validateFormation(squad, starterIds, formation);
+  const errors = validateLineup(squad, starterIds, formation);
+  const inspectedPlayer = squad.find((player) => player.id === inspectedId) ?? starters[0];
   const changeFormation = (next: Formation) => {
+    const nextStarters = pickFormationXI(squad, next);
     setFormation(next);
-    setStarterIds(pickFormationXI(squad, next));
+    setStarterIds(nextStarters);
+    setInspectedId(nextStarters[0] ?? '');
     setSwapSource(null);
     setMessage(`${next} selected. The strongest valid XI for that shape is on the pitch.`);
   };
@@ -536,6 +546,7 @@ function LineupStep({
       return;
     }
     setStarterIds(next);
+    setInspectedId(substitute.id);
     setSwapSource(null);
     setMessage(`${substitute.name} replaces ${starter.name}.`);
   };
@@ -543,7 +554,7 @@ function LineupStep({
   return (
     <section className="builder-step page-shell lineup-step">
       <SectionHeading
-        eyebrow="Step 03 · Starting team"
+        eyebrow="Final Third · Tactical screen · Step 03"
         title="Pick your XI"
         copy="Choose one of the engine-supported formations. Your remaining seven players form the bench."
       />
@@ -574,6 +585,7 @@ function LineupStep({
                   className={swapSource === player.id ? 'selected' : ''}
                   style={{ left: `${points[index]![0]}%`, top: `${points[index]![1]}%` }}
                   onClick={() => {
+                    setInspectedId(player.id);
                     setSwapSource(player.id);
                     setMessage(
                       `Now choose a ${player.position} from the bench to replace ${player.name}.`,
@@ -594,7 +606,10 @@ function LineupStep({
                 <button
                   key={player.id}
                   type="button"
-                  onClick={() => swap(player)}
+                  onClick={() => {
+                    setInspectedId(player.id);
+                    swap(player);
+                  }}
                   className={
                     swapSource &&
                     squad.find((item) => item.id === swapSource)?.position === player.position
@@ -611,8 +626,32 @@ function LineupStep({
           </div>
         </div>
         <Card className="lineup-detail">
-          <p className="card-kicker">Team check</p>
-          <h2>{formation}</h2>
+          <p className="card-kicker">Selected player</p>
+          {inspectedPlayer ? (
+            <>
+              <div className="player-detail-heading">
+                <span>{inspectedPlayer.position}</span>
+                <strong>{inspectedPlayer.overall}</strong>
+              </div>
+              <h2>{inspectedPlayer.name}</h2>
+              <p className="player-detail-meta">
+                {inspectedPlayer.clubName} · {money(inspectedPlayer.price)} ·{' '}
+                {statusLabel(inspectedPlayer.status)}
+              </p>
+              <div className="rating-bars" aria-label={`${inspectedPlayer.name} engine ratings`}>
+                {Object.entries(inspectedPlayer.ratings).map(([label, value]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <span className="rating-track" aria-hidden="true">
+                      <span style={{ width: `${value}%` }} />
+                    </span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+          <p className="card-kicker lineup-check-label">XI check · {formation}</p>
           <div className="lineup-counts">
             <span>
               Goalkeepers <strong>1</strong>
@@ -631,11 +670,11 @@ function LineupStep({
             </span>
           </div>
           <p className="model-note">
-            Only same-position swaps are offered, so the XI always stays valid.
+            Select a starter, then a same-position substitute. Invalid swaps are rejected.
           </p>
         </Card>
       </div>
-      <div className="validation-banner visible" aria-live="polite">
+      <div className="validation-banner builder-lower-third visible" aria-live="polite">
         {message}
       </div>
       <div className="step-actions">
@@ -701,6 +740,7 @@ function PredictionStep({
     item.probability > best.probability ? item : best,
   );
   const peak = Math.max(...prediction.positionDistribution.map((item) => item.probability));
+  const pointsPeak = Math.max(...prediction.pointsDistribution.map((item) => item.probability));
   const shareText = `${identity.name} are predicted to finish ${ordinal(likely.position)} with ${prediction.meanPoints.toFixed(1)} points across ${prediction.seasons.toLocaleString()} simulated seasons.`;
   const share = async () => {
     try {
@@ -730,9 +770,9 @@ function PredictionStep({
   return (
     <section className="builder-step page-shell prediction-step">
       <SectionHeading
-        eyebrow="Step 04 · Season forecast"
+        eyebrow="Final Third · Forecast desk · Step 04"
         title="Your prediction"
-        copy={`A real ${prediction.seasons.toLocaleString()}-season engine forecast. ${identity.name} replaces the default promoted side in a 20-club league.`}
+        copy={`A real ${prediction.seasons.toLocaleString()}-season engine forecast. ${identity.name} replaces ${REPLACED_CLUB.name} in a 20-club league.`}
       />
       <Card className="result-card">
         <div className="result-identity">
@@ -750,15 +790,43 @@ function PredictionStep({
           <Stat label="Top four" value={pct(prediction.top4Probability)} />
           <Stat label="Relegation" value={pct(prediction.relegationProbability)} />
         </div>
-        <div className="position-chart" aria-label="Finishing position probability distribution">
-          {prediction.positionDistribution.map((item) => (
-            <div key={item.position}>
-              <span style={{ height: `${Math.max(2, (item.probability / peak) * 100)}%` }} />
-              <small>{item.position}</small>
+        <div className="distribution-grid">
+          <figure>
+            <figcaption>Finishing position distribution</figcaption>
+            <div
+              className="position-chart"
+              aria-label="Finishing position probability distribution"
+            >
+              {prediction.positionDistribution.map((item) => (
+                <div
+                  key={item.position}
+                  title={`${ordinal(item.position)}: ${pct(item.probability)}`}
+                >
+                  <span style={{ height: `${Math.max(2, (item.probability / peak) * 100)}%` }} />
+                  <small>{item.position}</small>
+                </div>
+              ))}
             </div>
-          ))}
+            <p className="chart-caption">Position · 1st to 20th</p>
+          </figure>
+          <figure>
+            <figcaption>Points distribution</figcaption>
+            <div className="points-chart" aria-label="Season points probability distribution">
+              {prediction.pointsDistribution.map((item) => (
+                <div
+                  key={item.min}
+                  title={`${item.min}–${item.max} points: ${pct(item.probability)}`}
+                >
+                  <span
+                    style={{ height: `${Math.max(2, (item.probability / pointsPeak) * 100)}%` }}
+                  />
+                  <small>{item.min}</small>
+                </div>
+              ))}
+            </div>
+            <p className="chart-caption">Points · five-point bands</p>
+          </figure>
         </div>
-        <p className="chart-caption">Probability by finishing position · 1st to 20th</p>
         <div className="share-row">
           <button className="button button-primary button-default" type="button" onClick={share}>
             Share prediction <span aria-hidden="true">↗</span>
@@ -819,32 +887,16 @@ export function PlayFlow() {
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as SavedFlow;
-        const selectedPlayers = saved.selectedIds
-          .map((id) => market.find((player) => player.id === id))
-          .filter((player): player is MarketPlayer => Boolean(player));
-        setIdentity({ ...emptyIdentity, ...saved.identity });
-        setSelected(selectedPlayers);
-        const savedFormation = saved.formation in FORMATIONS ? saved.formation : '4-4-2';
-        const savedStarters = saved.starterIds ?? [];
-        setFormation(savedFormation);
-        setStarterIds(savedStarters);
-        const completeSquad = validateSquad(selectedPlayers).length === 0;
-        const validXI =
-          completeSquad &&
-          validateFormation(selectedPlayers, savedStarters, savedFormation).length === 0;
-        setStep(
-          (saved.step === 'lineup' || saved.step === 'prediction') && !completeSquad
-            ? 'squad'
-            : saved.step === 'prediction' && !validXI
-              ? 'lineup'
-              : (saved.step ?? 'identity'),
-        );
+      const restored = parseSavedFlow(localStorage.getItem(STORAGE_KEY), market);
+      if (restored) {
+        setIdentity(restored.identity);
+        setSelected(restored.selected);
+        setFormation(restored.formation);
+        setStarterIds(restored.starterIds);
+        setStep(restored.step);
       }
     } catch {
-      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
     } finally {
       setHydrated(true);
     }
@@ -859,14 +911,18 @@ export function PlayFlow() {
       formation,
       starterIds,
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } catch {
+      // The flow remains fully usable when storage is unavailable or full.
+    }
   }, [formation, hydrated, identity, selected, starterIds, step]);
 
   useEffect(() => {
     if (
       step !== 'prediction' ||
       validateSquad(selected).length > 0 ||
-      validateFormation(selected, starterIds, formation).length > 0
+      validateLineup(selected, starterIds, formation).length > 0
     )
       return;
     setPrediction(null);
@@ -886,6 +942,7 @@ export function PlayFlow() {
     worker.postMessage({
       team: createPredictionTeam('user-club', identity.name, selected, starterIds, formation),
       seed: PREDICTION_SEED,
+      replacedClubId: REPLACED_CLUB.id,
     });
     return () => worker.terminate();
   }, [formation, identity.name, predictionRun, selected, starterIds, step]);

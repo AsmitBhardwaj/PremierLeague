@@ -10,6 +10,7 @@ import {
   createPredictionTeam,
   pickFormationXI,
   validateFormation,
+  validateLineup,
   validateSquad,
   type MarketPlayer,
 } from './squad';
@@ -21,35 +22,51 @@ const cheapestSquad = (): MarketPlayer[] => {
   return completion.playerIds.map((id) => market.find((player) => player.id === id)!);
 };
 
-describe('Phase 3 squad rules', () => {
-  it('finds an exact legal minimum-cost completion', () => {
+describe('complete roster validation', () => {
+  it('accepts exactly 18 players with the approved positional mix', () => {
     const squad = cheapestSquad();
-    expect(squad).toHaveLength(18);
     expect(validateSquad(squad)).toEqual([]);
-    expect(squad.reduce((sum, player) => sum + player.price, 0)).toBeLessThanOrEqual(SQUAD_BUDGET);
+    expect(squad).toHaveLength(18);
     for (const [position, quota] of Object.entries(POSITION_QUOTAS)) {
       expect(squad.filter((player) => player.position === position)).toHaveLength(quota);
     }
   });
 
-  it('enforces budget, position quotas, duplicates and the three-per-club limit', () => {
-    const squad = cheapestSquad();
-    expect(validateSquad([...squad, squad[0]!])).toContain('A player can only be selected once.');
-    const expensive = squad.map((player, index) =>
+  it('rejects incomplete squads', () => {
+    expect(validateSquad(cheapestSquad().slice(0, -1))).toContain('Select exactly 18 players.');
+  });
+});
+
+describe('selection constraints', () => {
+  it('enforces the 950-unit budget', () => {
+    const squad = cheapestSquad().map((player, index) =>
       index === 0 ? { ...player, price: SQUAD_BUDGET } : player,
     );
-    expect(validateSquad(expensive)).toContain('The squad is over the £95.0m budget.');
-
-    const sameClub = squad.map((player, index) =>
-      index < 4 ? { ...player, clubId: 'same', clubName: 'Same Club' } : player,
+    expect(validateSquad(squad)).toContain('The squad is over the £95.0m budget.');
+    expect(assessSelection({ ...market[0]!, price: 951 }, [], market).message).toMatch(
+      /over £95\.0m/,
     );
-    expect(validateSquad(sameClub)).toContain('Select no more than 3 players from any real club.');
-    expect(
-      validateSquad(squad.map((player) => ({ ...player, position: 'MID' as const }))),
-    ).toContain('Select exactly 2 GK players.');
   });
 
-  it('rejects an addition when a club cap or cheapest completion makes it illegal', () => {
+  it('enforces each positional quota', () => {
+    const squad = cheapestSquad().map((player) => ({ ...player, position: 'MID' as const }));
+    expect(validateSquad(squad)).toContain('Select exactly 2 GK players.');
+    const sixDefenders = cheapestSquad().filter((player) => player.position === 'DEF');
+    const defender = market.find(
+      (player) => player.position === 'DEF' && !sixDefenders.some((item) => item.id === player.id),
+    )!;
+    expect(assessSelection(defender, sixDefenders, market).message).toBe(
+      'Your DEF quota is already full.',
+    );
+  });
+
+  it('prevents duplicate players', () => {
+    const squad = cheapestSquad();
+    expect(validateSquad([...squad, squad[0]!])).toContain('A player can only be selected once.');
+    expect(assessSelection(squad[0]!, squad, market).message).toMatch(/already in your squad/);
+  });
+
+  it('enforces the maximum of three players per real club', () => {
     const club = market.find(
       (candidate) => market.filter((player) => player.clubId === candidate.clubId).length >= 4,
     )!.clubId;
@@ -57,28 +74,72 @@ describe('Phase 3 squad rules', () => {
     expect(assessSelection(clubPlayers[3]!, clubPlayers.slice(0, 3), market).message).toMatch(
       /3 players/,
     );
+    const invalid = cheapestSquad().map((player, index) =>
+      index < 4 ? { ...player, clubId: 'same', clubName: 'Same Club' } : player,
+    );
+    expect(validateSquad(invalid)).toContain('Select no more than 3 players from any real club.');
+  });
+});
 
+describe('cheapest legal completion', () => {
+  it('finds an exact legal minimum-cost completion', () => {
+    const completion = cheapestLegalCompletion([], market);
+    expect(completion).not.toBeNull();
+    const squad = completion!.playerIds.map((id) => market.find((player) => player.id === id)!);
+    expect(completion!.cost).toBe(squad.reduce((sum, player) => sum + player.price, 0));
+    expect(validateSquad(squad)).toEqual([]);
+  });
+
+  it('rejects a selection whose cheapest legal completion exceeds the budget', () => {
     const inflated = market.map((player) => ({ ...player, price: 100 }));
     expect(assessSelection(inflated[0]!, [], inflated).message).toMatch(
       /cheapest legal completion/,
     );
   });
+
+  it('returns null when club limits make completion impossible', () => {
+    const oneClub = market.map((player) => ({ ...player, clubId: 'only-club' }));
+    expect(cheapestLegalCompletion([], oneClub)).toBeNull();
+  });
 });
 
-describe('formation and prediction integration', () => {
+describe('formation, XI and bench validation', () => {
   it.each(Object.keys(FORMATIONS) as (keyof typeof FORMATIONS)[])(
-    'builds a valid %s XI and seven-player bench',
+    'builds a valid %s XI with a seven-player bench',
     (formation) => {
       const squad = cheapestSquad();
       const starters = pickFormationXI(squad, formation);
       expect(validateFormation(squad, starters, formation)).toEqual([]);
+      expect(validateLineup(squad, starters, formation)).toEqual([]);
       const team = createPredictionTeam('test', 'Test Club', squad, starters, formation);
       expect(team.players).toHaveLength(11);
       expect(team.bench).toHaveLength(7);
     },
   );
 
-  it('runs the real prediction deterministically for the completed user squad', () => {
+  it('rejects invalid formation composition and invalid bench membership', () => {
+    const squad = cheapestSquad();
+    const starters = pickFormationXI(squad, '4-4-2');
+    const goalkeeper = squad.find(
+      (player) => player.position === 'GK' && !starters.includes(player.id),
+    )!;
+    const defenderIndex = starters.findIndex(
+      (id) => squad.find((player) => player.id === id)?.position === 'DEF',
+    );
+    const invalidShape = starters.map((id, index) =>
+      index === defenderIndex ? goalkeeper.id : id,
+    );
+    expect(validateFormation(squad, invalidShape, '4-4-2')).toContain(
+      'The starting XI must contain exactly one goalkeeper.',
+    );
+    expect(validateLineup(squad, [...starters.slice(0, -1), 'not-in-squad'], '4-4-2')).toContain(
+      'Every starter must belong to the selected squad.',
+    );
+  });
+});
+
+describe('predictSeason integration', () => {
+  it('is deterministic for a completed user squad and explicit replacement club', () => {
     const squad = cheapestSquad();
     const formation = '4-4-2';
     const team = createPredictionTeam(
@@ -88,8 +149,7 @@ describe('formation and prediction integration', () => {
       pickFormationXI(squad, formation),
       formation,
     );
-    expect(predictSeason(team, { seasons: 100, seed: 2103 })).toEqual(
-      predictSeason(team, { seasons: 100, seed: 2103 }),
-    );
+    const options = { seasons: 100, seed: 2103, replacedClubId: 'IPS' };
+    expect(predictSeason(team, options)).toEqual(predictSeason(team, options));
   });
 });

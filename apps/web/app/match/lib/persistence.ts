@@ -1,6 +1,6 @@
 import type { Tactic } from '@pl/engine';
 import { validateLineup, type Formation, type MarketPlayer } from '../../play/lib/squad';
-import type { PlaybackMode } from './playback';
+import type { PlaybackMode } from './timeline';
 import type { Venue } from './seed';
 
 /** Bumped from phase-4 v1: older saves are ignored. */

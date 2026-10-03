@@ -18,6 +18,8 @@ import { fixtureOdds } from './lib/odds';
 import { RATING_LABELS, radarAxes } from './lib/radar';
 import type { Venue } from './lib/seed';
 import { TACTICS } from './lib/tactics';
+import type { PlaybackMode } from './lib/timeline';
+import { MODES } from './MatchViewer';
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 const statusLabel = (status: string) =>
@@ -31,6 +33,8 @@ export function PickTeam({
   market,
   opponents,
   seed,
+  mode,
+  onModeChange,
   onKickOff,
 }: {
   preparation: MatchPreparation;
@@ -38,6 +42,8 @@ export function PickTeam({
   market: readonly MarketPlayer[];
   opponents: RealClub[];
   seed: number;
+  mode: PlaybackMode;
+  onModeChange: (mode: PlaybackMode) => void;
   onKickOff: () => void;
 }) {
   const { squad, starterIds, formation, tactic, opponentId, venue } = preparation;
@@ -279,6 +285,23 @@ export function PickTeam({
                   onClick={() => update({ venue: item })}
                 >
                   {item === 'home' ? 'Home' : 'Away'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-field">
+            <span id="mode-label">View</span>
+            <div className="mt-modes" role="radiogroup" aria-labelledby="mode-label">
+              {MODES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === item.id}
+                  className={mode === item.id ? 'selected' : ''}
+                  onClick={() => onModeChange(item.id)}
+                >
+                  {item.label}
                 </button>
               ))}
             </div>

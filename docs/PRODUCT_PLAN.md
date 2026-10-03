@@ -55,6 +55,20 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 - Exclude only players whose FPL status is `u`; players with status `a`, `d`, `i` or `s` remain selectable.
 - The starting XI must use one of the six engine-supported formations: 4-4-2, 4-3-3, 3-5-2, 5-3-2, 4-5-1 or 3-4-3.
 
+### Approved Phase 4 decisions
+
+- Match context: a single match. After the prediction screen the user picks any of the 19 real clubs as opponent and chooses home or away. There is no fixture list, league table or season progression (Phase 5). The replaced club is computed by the plan's rule (the promoted club with the weakest squad), not hardcoded; the opponents are the other 19 clubs.
+- Fitness and form: every player shows 100% fitness and a neutral form indicator ("—"). No values are invented.
+- Preferred foot: no data exists, so the field is omitted.
+- Six-stat radar: derived directly from engine ratings. Outfield players show Pace, Shooting, Passing, Dribbling, Tackling and Positioning; goalkeepers show Goalkeeping in place of Shooting. The headline number is the existing `overall()`.
+- Off-ball players: the timeline only positions players involved in each event. Other dots are cosmetic, anchored to the formation and shifting with the ball and possession. They never imply an event that is not in the timeline.
+- Highlights mode: goals, shots, big chances, cards, injuries and substitutions animate; everything else compresses into clock advance plus commentary. A full match plays in 20 seconds at most (about 10 seconds per half; the half-time pause is excluded). Instant mode skips straight to the result.
+- Match seed: `hash(club name, opponent, venue, play counter)`, using the seeded PRNG pipeline and never `Math.random`. The play counter is persisted so a refresh does not replay a seed by accident; "Play again" increments it. Lineup and tactic changes keep the seed, so outcomes can be compared. The seed is stored with match state and shown as a small muted "Match seed" detail.
+- Opponent AI: the engine's `pickSquad` XI, balanced tactic, no half-time changes. The user may play at home or away; the viewer keeps the engine's orientation (home attacks left to right) and the score bug always reads home on the left, with the user's club marked by its colour.
+- Fixture card odds: the exact Poisson scoreline grid over the same `expectedGoals` surrogate that `predictSeason` samples from (independent Poisson goals; the surrogate has no Dixon-Coles correction; home advantage is the surrogate's `isHome` term). They are not computed by summing player stats.
+- Engine change: substitution events gain an additive `offPlayerId` (data only; RNG order, decisions and outcomes unchanged, proven by a golden fingerprint test; `calibrate` and `calibrate-season` output unchanged).
+- Storage: the Phase 4 save version is bumped and older saves are ignored.
+
 ## 5. How the prediction works
 
 1. **Players → ratings.** FPL stats (xG, xA, creativity, threat, defensive actions, saves, minutes) are mapped to 0–100 engine ratings by **global rules** in `ratings.ts`, with shrinkage for low-minute players and a lower prior for players without top-flight history.

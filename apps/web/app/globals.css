@@ -105,10 +105,6 @@ h3,
 }
 
 .grass-stripes,
-.tactical-pitch,
-.match-tv-pitch,
-.selection-pitch,
-.timeline-pitch,
 .pitch {
   background-color: var(--grass-dark);
   background-image: repeating-linear-gradient(
@@ -1012,15 +1008,15 @@ h3,
   color: var(--volt);
 }
 
+/* Every pitch graphic uses the §8 60px mowed bands: one 120px tile, two 60px bands. */
 .tactical-pitch,
 .match-tv-pitch,
 .selection-pitch,
-.timeline-pitch {
+.timeline-pitch,
+.viewer-pitch,
+.pickteam-pitch {
+  background-color: var(--grass-dark);
   background-size: 120px 100%;
-}
-
-.tactical-pitch,
-.match-tv-pitch {
   background-image: repeating-linear-gradient(
     90deg,
     var(--grass-dark) 0,

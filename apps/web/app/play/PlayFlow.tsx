@@ -18,12 +18,13 @@ import {
   pickFormationXI,
   positionCounts,
   squadCost,
-  validateFormation,
   validateLineup,
   validateSquad,
   type Formation,
   type MarketPlayer,
 } from './lib/squad';
+import { computeReplacedClub } from './lib/clubs';
+import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import {
   STORAGE_KEY,
   emptyIdentity,
@@ -37,7 +38,8 @@ import {
 
 const market = playerData as MarketPlayer[];
 const PREDICTION_SEED = 2103;
-const REPLACED_CLUB = { id: 'IPS', name: 'Ipswich Town' } as const;
+/** Computed from the plan's rule (weakest promoted squad), never hardcoded. */
+const REPLACED_CLUB = computeReplacedClub(market);
 const stepOrder: Step[] = ['identity', 'squad', 'lineup', 'prediction'];
 const stepNames: Record<Step, string> = {
   identity: 'Found club',
@@ -481,23 +483,6 @@ function SquadStep({
   );
 }
 
-const pitchPositions = Object.fromEntries(
-  (Object.keys(FORMATIONS) as Formation[]).map((formation) => {
-    const shape = FORMATIONS[formation];
-    const line = (count: number, y: number) =>
-      Array.from({ length: count }, (_, index) => [((index + 1) * 100) / (count + 1), y]);
-    return [
-      formation,
-      {
-        GK: [[50, 91]],
-        DEF: line(shape.DEF, 68),
-        MID: line(shape.MID, 42),
-        FWD: line(shape.FWD, 16),
-      },
-    ];
-  }),
-) as Record<Formation, Record<'GK' | 'DEF' | 'MID' | 'FWD', number[][]>>;
-
 function LineupStep({
   squad,
   formation,
@@ -520,11 +505,8 @@ function LineupStep({
   const [message, setMessage] = useState(
     'Choose a starter, then a same-position substitute to swap.',
   );
-  const starterSet = new Set(starterIds);
-  const starters = starterIds
-    .map((id) => squad.find((player) => player.id === id)!)
-    .filter(Boolean);
-  const bench = squad.filter((player) => !starterSet.has(player.id));
+  const starters = startersOf(squad, starterIds);
+  const bench = benchOf(squad, starterIds);
   const errors = validateLineup(squad, starterIds, formation);
   const inspectedPlayer = squad.find((player) => player.id === inspectedId) ?? starters[0];
   const changeFormation = (next: Formation) => {
@@ -536,26 +518,12 @@ function LineupStep({
     setMessage(`${next} selected. The strongest valid XI for that shape is on the pitch.`);
   };
   const swap = (substitute: MarketPlayer) => {
-    if (!swapSource) {
-      setMessage('Select a starter on the pitch first.');
-      return;
-    }
-    const starter = squad.find((player) => player.id === swapSource)!;
-    if (starter.position !== substitute.position) {
-      setMessage(
-        `${substitute.name} cannot replace ${starter.name}: swaps must preserve the ${formation} shape.`,
-      );
-      return;
-    }
-    const next = starterIds.map((id) => (id === starter.id ? substitute.id : id));
-    if (validateFormation(squad, next, formation).length > 0) {
-      setMessage('That swap would make the starting XI invalid.');
-      return;
-    }
-    setStarterIds(next);
+    const result = swapStarter(squad, starterIds, formation, swapSource, substitute.id);
+    setMessage(result.message);
+    if (!result.ok) return;
+    setStarterIds(result.starterIds);
     setInspectedId(substitute.id);
     setSwapSource(null);
-    setMessage(`${substitute.name} replaces ${starter.name}.`);
   };
 
   return (

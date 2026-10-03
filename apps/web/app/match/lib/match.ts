@@ -1,7 +1,5 @@
 import {
   Match,
-  pickSquad,
-  simulateMatch,
   TUNING,
   type MatchEvent,
   type MatchInput,
@@ -13,6 +11,7 @@ import {
   type Team,
   type TeamStats,
 } from '@pl/engine';
+import { buildRealClubTeam } from '../../play/lib/clubs';
 import type { ClubIdentity } from '../../play/lib/persistence';
 import {
   createPredictionTeam,
@@ -20,9 +19,9 @@ import {
   type Formation,
   type MarketPlayer,
 } from '../../play/lib/squad';
+import { matchSeed, type Venue } from './seed';
 
-export const MATCH_SEED_SALT = 0x21c104;
-export const DEFAULT_OPPONENT = 'Arsenal';
+export const USER_TEAM_ID = 'user-club';
 
 export interface MatchPreparation {
   identity: ClubIdentity;
@@ -30,13 +29,8 @@ export interface MatchPreparation {
   starterIds: string[];
   formation: Formation;
   tactic: Tactic;
-}
-
-export interface MatchOdds {
-  win: number;
-  draw: number;
-  loss: number;
-  samples: number;
+  opponentId: string;
+  venue: Venue;
 }
 
 export interface PendingSubstitution {
@@ -61,30 +55,12 @@ const emptyStats = (): TeamStats => ({
   injuries: 0,
 });
 
-/** Stable FNV-1a hash. It is only used to choose a reproducible match seed. */
-export function matchSeed(preparation: MatchPreparation, opponentId: string): number {
-  const value = [
-    preparation.identity.name,
-    preparation.identity.shortName,
-    preparation.formation,
-    preparation.tactic,
-    ...preparation.starterIds,
-    opponentId,
-  ].join('|');
-  let hash = (0x811c9dc5 ^ MATCH_SEED_SALT) >>> 0;
-  for (let index = 0; index < value.length; index++) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash | 0;
-}
-
 export function createUserMatchTeam(preparation: MatchPreparation): Team {
   const errors = validateLineup(preparation.squad, preparation.starterIds, preparation.formation);
   if (errors.length) throw new Error(errors.join(' '));
   return {
     ...createPredictionTeam(
-      'user-club',
+      USER_TEAM_ID,
       preparation.identity.name,
       preparation.squad,
       preparation.starterIds,
@@ -95,63 +71,49 @@ export function createUserMatchTeam(preparation: MatchPreparation): Team {
 }
 
 /**
- * Build an opponent with the engine's global squad picker. IDs are side-scoped because a fantasy
- * signing can still appear for his real club and Match requires unique IDs across both teams.
+ * A real club for the engine's global squad picker: balanced tactic, no per-club adjustments.
+ * IDs are prefixed because a signing can also appear for his real club, and Match requires unique
+ * player IDs across both teams.
  */
-export function createOpponentTeam(
-  market: readonly MarketPlayer[],
-  clubName = DEFAULT_OPPONENT,
-): Team {
-  const eligible = market.filter((player) => player.clubName === clubName && player.status !== 'u');
-  if (!eligible.length) throw new Error(`No eligible players found for ${clubName}.`);
-  const clubId = eligible[0]!.clubShortName;
-  const players: Player[] = eligible.map((player) => ({
-    id: `opponent:${player.id}`,
-    name: player.name,
-    position: player.position,
-    ratings: player.ratings,
-  }));
-  return pickSquad(`opponent:${clubId}`, clubName, players);
+export function createOpponentTeam(market: readonly MarketPlayer[], opponentId: string): Team {
+  const team = buildRealClubTeam(market, opponentId);
+  const prefix = (player: Player): Player => ({ ...player, id: `opponent:${player.id}` });
+  return {
+    ...team,
+    id: `opponent:${opponentId}`,
+    players: team.players.map(prefix),
+    bench: team.bench?.map(prefix),
+  };
 }
 
 export function createMatchInput(
   preparation: MatchPreparation,
   market: readonly MarketPlayer[],
-  opponentName = DEFAULT_OPPONENT,
+  playCounter: number,
 ): MatchInput {
-  const away = createOpponentTeam(market, opponentName);
+  const user = createUserMatchTeam(preparation);
+  const opponent = createOpponentTeam(market, preparation.opponentId);
   return {
-    home: createUserMatchTeam(preparation),
-    away,
-    seed: matchSeed(preparation, away.id),
-  };
-}
-
-/** W/D/L guide from the full team-v-team engine, never from summed player stats. */
-export function estimateMatchOdds(input: MatchInput, samples = 80): MatchOdds {
-  let win = 0;
-  let draw = 0;
-  for (let index = 0; index < samples; index++) {
-    const result = simulateMatch({ ...input, seed: input.seed + index + 1 });
-    if (result.score.home > result.score.away) win++;
-    else if (result.score.home === result.score.away) draw++;
-  }
-  return {
-    win: win / samples,
-    draw: draw / samples,
-    loss: (samples - win - draw) / samples,
-    samples,
+    home: preparation.venue === 'home' ? user : opponent,
+    away: preparation.venue === 'home' ? opponent : user,
+    seed: matchSeed(
+      preparation.identity.name,
+      preparation.opponentId,
+      preparation.venue,
+      playCounter,
+    ),
   };
 }
 
 export function validateSubstitution(
   team: Team,
+  side: Side,
   snapshot: MatchSnapshot,
   substitution: PendingSubstitution,
   pending: readonly PendingSubstitution[] = [],
 ): string | null {
   if (snapshot.period !== 'half_time') return 'Substitutions can only be confirmed at half-time.';
-  if (snapshot.substitutionsUsed.home + pending.length >= TUNING.maxSubstitutions) {
+  if (snapshot.substitutionsUsed[side] + pending.length >= TUNING.maxSubstitutions) {
     return `Only ${TUNING.maxSubstitutions} substitutions are allowed.`;
   }
   if (substitution.off === substitution.on) return 'Choose two different players.';
@@ -176,11 +138,16 @@ export function validateSubstitution(
 /** Owns the single engine Match instance; playback never receives a mutation method. */
 export class MatchSession {
   private readonly match: Match;
-  private readonly input: MatchInput;
 
-  constructor(input: MatchInput) {
-    this.input = input;
+  constructor(
+    readonly input: MatchInput,
+    readonly userSide: Side,
+  ) {
     this.match = new Match(input);
+  }
+
+  get userTeam(): Team {
+    return this.input[this.userSide];
   }
 
   playFirstHalf(): MatchSnapshot {
@@ -194,18 +161,19 @@ export class MatchSession {
 
   continueSecondHalf(tactic: Tactic, substitutions: readonly PendingSubstitution[]): MatchResult {
     const snapshot = this.match.snapshot();
-    for (const substitution of substitutions) {
+    substitutions.forEach((substitution, index) => {
       const error = validateSubstitution(
-        this.input.home,
+        this.userTeam,
+        this.userSide,
         snapshot,
         substitution,
-        substitutions.slice(0, substitutions.indexOf(substitution)),
+        substitutions.slice(0, index),
       );
       if (error) throw new Error(error);
-    }
-    this.match.setTactic('home', tactic);
+    });
+    this.match.setTactic(this.userSide, tactic);
     for (const substitution of substitutions) {
-      if (!this.match.substitute('home', substitution.off, substitution.on)) {
+      if (!this.match.substitute(this.userSide, substitution.off, substitution.on)) {
         throw new Error('The engine rejected a pending substitution.');
       }
     }

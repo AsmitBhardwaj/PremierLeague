@@ -13,8 +13,7 @@
   --deep-green: #0b3320;
   --pitch-lines: rgb(245 241 228 / 50%);
   --volt: #d7f24a;
-  --signal-red: #e5383b;
-  --signal-red-badge: #cf2f32;
+  --signal-red: #cf2f32;
   --transfer: #ff6b2c;
   --analysis-sky: #5bb8f0;
   --analysis-sky-text: #1a6fa8;
@@ -278,8 +277,8 @@ h3,
 }
 
 .hero-content {
-  min-height: 456px;
-  padding: 42px 0 34px;
+  min-height: 0;
+  padding: 24px 0 26px;
   position: relative;
   z-index: 1;
   display: grid;
@@ -304,7 +303,7 @@ h3,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--signal-red-badge);
+  background: var(--signal-red);
   color: #fff;
 }
 
@@ -324,7 +323,7 @@ h3,
 
 .hero-copy h1 {
   max-width: 700px;
-  margin: 22px 0 20px;
+  margin: 16px 0 16px;
   font-size: clamp(46px, 6.2vw, 88px);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -339,19 +338,19 @@ h3,
 
 .hero-lead {
   max-width: 630px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   color: var(--cream);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .hero-support {
   max-width: 590px;
   margin-bottom: 0;
   color: var(--cream);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 18px;
+  line-height: 1.4;
 }
 
 .studio-screen {
@@ -507,7 +506,7 @@ h3,
 }
 
 .hero-lower-third {
-  min-height: 92px;
+  min-height: 84px;
   position: relative;
   z-index: 2;
   display: grid;
@@ -517,7 +516,7 @@ h3,
 }
 
 .hero-lower-third > div {
-  padding: 17px 24px;
+  padding: 12px 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -533,9 +532,9 @@ h3,
 }
 
 .hero-lower-third p {
-  margin: 7px 0 0;
+  margin: 5px 0 0;
   color: var(--cream);
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .hero-lower-third .button {
@@ -568,7 +567,7 @@ h3,
 
 .breaking-tag {
   padding: 6px 8px;
-  background: var(--signal-red-badge);
+  background: var(--signal-red);
   color: #fff;
   font-size: 10px;
   font-weight: 600;
@@ -2948,12 +2947,12 @@ h3,
 
   .hero-lead {
     margin-bottom: 9px;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.4;
   }
 
   .hero-support {
-    font-size: 11px;
+    font-size: 16px;
   }
 
   .studio-screen {
@@ -2980,7 +2979,7 @@ h3,
 
   .hero-lower-third p {
     margin-top: 4px;
-    font-size: 10px;
+    font-size: 16px;
   }
 
   .hero-lower-third .button {

@@ -127,7 +127,7 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 | Deep green           | `#0B3320`                      | Analysis ground and hard shadows                                            |
 | Pitch lines          | `rgba(245, 241, 228, 0.5)`     | Pitch markings                                                              |
 | Volt                 | `#D7F24A`                      | Primary CTA background and headline highlights on green                     |
-| Signal red           | `#E5383B`                      | `LIVE` and `BREAKING` only                                                  |
+| Signal red           | `#CF2F32`                      | `LIVE` and `BREAKING` only; white text on it is 5.1:1                       |
 | Transfer desk orange | `#FF6B2C`                      | Transfer-desk segment tag                                                   |
 | The analysis sky     | `#5BB8F0` / `#1A6FA8` on light | Analysis segment tag and accessible sky text on light                       |
 | Highlights           | `#D7F24A`                      | Highlights segment tag                                                      |
@@ -137,6 +137,7 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 | Forward              | `#FF6B2C`                      | `FWD` wherever a position appears                                           |
 | Warning              | `#8A5A12` on `#F6E7C8`         | Injuries and rule violations                                                |
 
+- Small text on the grass stripes must be cream, never muted green (muted green falls below 4.5:1 on the lighter stripe).
 - Position markers on a pitch always have a 2–3px ink outline.
 - Match viewer: the user's team uses its club primary colour with an ink outline, falling back to ink; opponents use cream with an ink outline. Position colours are not used in the match viewer.
 - Segment tags: Transfer desk is orange, The analysis is sky, and Highlights is volt.

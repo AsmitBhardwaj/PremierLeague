@@ -83,7 +83,7 @@ function FlowHeader({ step, identity }: { step: Step; identity: ClubIdentity }) 
         <a className="wordmark" href="/">
           21ST CLUB
         </a>
-        <span>Final Third</span>
+        <span>Matchday studio</span>
       </div>
       <ol className="builder-progress" aria-label="Club creation progress">
         {stepOrder.map((item, index) => (
@@ -123,7 +123,7 @@ function IdentityStep({
   return (
     <section className="builder-step page-shell">
       <SectionHeading
-        eyebrow="Final Third · Club registry · Step 01"
+        eyebrow="21st Club · Club registry · Step 01"
         title="Found your club"
         copy={`Create an original identity for the club replacing ${REPLACED_CLUB.name} in the 20-team league.`}
       />
@@ -306,14 +306,19 @@ function SquadStep({
   return (
     <section className="builder-step page-shell squad-step">
       <SectionHeading
-        eyebrow="Final Third · Transfer desk · Step 02"
+        eyebrow="21st Club · Transfer desk · Step 02"
         title="Build your squad"
         copy="Sign exactly 18 real players. Every choice is checked against the budget, positional quotas and three-per-club rule."
       />
       <div className="squad-summary scorebug-strip" aria-label="Squad status">
         <Stat label="Players" value={`${selected.length}/18`} />
         {POSITION_ORDER.map((item) => (
-          <Stat key={item} label={item} value={`${counts[item]}/${POSITION_QUOTAS[item]}`} />
+          <Stat
+            key={item}
+            className={`position-stat position-${item.toLowerCase()}`}
+            label={item}
+            value={`${counts[item]}/${POSITION_QUOTAS[item]}`}
+          />
         ))}
         <Stat label="Remaining" value={money(SQUAD_BUDGET - cost)} />
       </div>
@@ -383,7 +388,9 @@ function SquadStep({
               const block = obviousBlock(player);
               return (
                 <div className="player-row" role="listitem" key={player.id}>
-                  <span className="position-chip">{player.position}</span>
+                  <span className={`position-chip position-${player.position.toLowerCase()}`}>
+                    {player.position}
+                  </span>
                   <span className="player-name">
                     <strong>{player.name}</strong>
                     <small>
@@ -423,7 +430,7 @@ function SquadStep({
           {POSITION_ORDER.map((item) => (
             <div className="selected-group" key={item}>
               <h3>
-                {item}{' '}
+                <span className={`selected-position position-${item.toLowerCase()}`}>{item}</span>{' '}
                 <span>
                   {counts[item]}/{POSITION_QUOTAS[item]}
                 </span>
@@ -554,7 +561,7 @@ function LineupStep({
   return (
     <section className="builder-step page-shell lineup-step">
       <SectionHeading
-        eyebrow="Final Third · Tactical screen · Step 03"
+        eyebrow="21st Club · Tactical screen · Step 03"
         title="Pick your XI"
         copy="Choose one of the engine-supported formations. Your remaining seven players form the bench."
       />
@@ -593,7 +600,9 @@ function LineupStep({
                   }}
                   aria-pressed={swapSource === player.id}
                 >
-                  <span>{player.position}</span>
+                  <span className={`position-${player.position.toLowerCase()}`}>
+                    {player.position}
+                  </span>
                   <strong>{player.name}</strong>
                 </button>
               ));
@@ -617,7 +626,9 @@ function LineupStep({
                       : ''
                   }
                 >
-                  <span>{player.position}</span>
+                  <span className={`position-${player.position.toLowerCase()}`}>
+                    {player.position}
+                  </span>
                   <strong>{player.name}</strong>
                   <small>{player.clubShortName}</small>
                 </button>
@@ -630,7 +641,9 @@ function LineupStep({
           {inspectedPlayer ? (
             <>
               <div className="player-detail-heading">
-                <span>{inspectedPlayer.position}</span>
+                <span className={`position-${inspectedPlayer.position.toLowerCase()}`}>
+                  {inspectedPlayer.position}
+                </span>
                 <strong>{inspectedPlayer.overall}</strong>
               </div>
               <h2>{inspectedPlayer.name}</h2>
@@ -770,7 +783,7 @@ function PredictionStep({
   return (
     <section className="builder-step page-shell prediction-step">
       <SectionHeading
-        eyebrow="Final Third · Forecast desk · Step 04"
+        eyebrow="21st Club · Forecast desk · Step 04"
         title="Your prediction"
         copy={`A real ${prediction.seasons.toLocaleString()}-season engine forecast. ${identity.name} replaces ${REPLACED_CLUB.name} in a 20-club league.`}
       />

@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "pnpm --filter @pl/scripts generate-landing-sample",
+  "club": {
+    "id": "northstar-fc",
+    "name": "Northstar FC",
+    "formation": "4-3-3",
+    "seed": 2103,
+    "replacedClubId": "IPS",
+    "budgetUsed": 939,
+    "squadPlayerIds": [
+      "fpl-251",
+      "fpl-273",
+      "fpl-422",
+      "fpl-446",
+      "fpl-230",
+      "fpl-114",
+      "fpl-332",
+      "fpl-112",
+      "fpl-124",
+      "fpl-403",
+      "fpl-183",
+      "fpl-339",
+      "fpl-126",
+      "fpl-17",
+      "fpl-224",
+      "fpl-465",
+      "fpl-464",
+      "fpl-166"
+    ],
+    "starterIds": [
+      "fpl-251",
+      "fpl-230",
+      "fpl-422",
+      "fpl-446",
+      "fpl-112",
+      "fpl-124",
+      "fpl-403",
+      "fpl-126",
+      "fpl-166",
+      "fpl-224",
+      "fpl-464"
+    ]
+  },
+  "prediction": {
+    "seasons": 10000,
+    "seed": 2103,
+    "replacedClubId": "IPS",
+    "meanPoints": 50.3535,
+    "pointsDistribution": [
+      {
+        "min": 20,
+        "max": 24,
+        "count": 3,
+        "probability": 0.0003
+      },
+      {
+        "min": 25,
+        "max": 29,
+        "count": 29,
+        "probability": 0.0029
+      },
+      {
+        "min": 30,
+        "max": 34,
+        "count": 164,
+        "probability": 0.0164
+      },
+      {
+        "min": 35,
+        "max": 39,
+        "count": 552,
+        "probability": 0.0552
+      },
+      {
+        "min": 40,
+        "max": 44,
+        "count": 1478,
+        "probability": 0.1478
+      },
+      {
+        "min": 45,
+        "max": 49,
+        "count": 2400,
+        "probability": 0.24
+      },
+      {
+        "min": 50,
+        "max": 54,
+        "count": 2470,
+        "probability": 0.247
+      },
+      {
+        "min": 55,
+        "max": 59,
+        "count": 1710,
+        "probability": 0.171
+      },
+      {
+        "min": 60,
+        "max": 64,
+        "count": 867,
+        "probability": 0.0867
+      },
+      {
+        "min": 65,
+        "max": 69,
+        "count": 266,
+        "probability": 0.0266
+      },
+      {
+        "min": 70,
+        "max": 74,
+        "count": 53,
+        "probability": 0.0053
+      },
+      {
+        "min": 75,
+        "max": 79,
+        "count": 8,
+        "probability": 0.0008
+      }
+    ],
+    "positionDistribution": [
+      {
+        "position": 1,
+        "count": 6,
+        "probability": 0.0006
+      },
+      {
+        "position": 2,
+        "count": 26,
+        "probability": 0.0026
+      },
+      {
+        "position": 3,
+        "count": 97,
+        "probability": 0.0097
+      },
+      {
+        "position": 4,
+        "count": 270,
+        "probability": 0.027
+      },
+      {
+        "position": 5,
+        "count": 439,
+        "probability": 0.0439
+      },
+      {
+        "position": 6,
+        "count": 582,
+        "probability": 0.0582
+      },
+      {
+        "position": 7,
+        "count": 766,
+        "probability": 0.0766
+      },
+      {
+        "position": 8,
+        "count": 761,
+        "probability": 0.0761
+      },
+      {
+        "position": 9,
+        "count": 897,
+        "probability": 0.0897
+      },
+      {
+        "position": 10,
+        "count": 920,
+        "probability": 0.092
+      },
+      {
+        "position": 11,
+        "count": 869,
+        "probability": 0.0869
+      },
+      {
+        "position": 12,
+        "count": 833,
+        "probability": 0.0833
+      },
+      {
+        "position": 13,
+        "count": 798,
+        "probability": 0.0798
+      },
+      {
+        "position": 14,
+        "count": 701,
+        "probability": 0.0701
+      },
+      {
+        "position": 15,
+        "count": 605,
+        "probability": 0.0605
+      },
+      {
+        "position": 16,
+        "count": 495,
+        "probability": 0.0495
+      },
+      {
+        "position": 17,
+        "count": 370,
+        "probability": 0.037
+      },
+      {
+        "position": 18,
+        "count": 271,
+        "probability": 0.0271
+      },
+      {
+        "position": 19,
+        "count": 186,
+        "probability": 0.0186
+      },
+      {
+        "position": 20,
+        "count": 108,
+        "probability": 0.0108
+      }
+    ],
+    "titleProbability": 0.0006,
+    "top4Probability": 0.0399,
+    "relegationProbability": 0.0565,
+    "perOpponentExpectedPoints": [
+      {
+        "opponentId": "ARS",
+        "opponentName": "Arsenal",
+        "home": 1.1937,
+        "away": 0.7942,
+        "total": 1.9879
+      },
+      {
+        "opponentId": "AVL",
+        "opponentName": "Aston Villa",
+        "home": 1.48,
+        "away": 1.0643,
+        "total": 2.5443
+      },
+      {
+        "opponentId": "BOU",
+        "opponentName": "Bournemouth",
+        "home": 1.5359,
+        "away": 1.1049,
+        "total": 2.6408
+      },
+      {
+        "opponentId": "BRE",
+        "opponentName": "Brentford",
+        "home": 1.787,
+        "away": 1.3694,
+        "total": 3.1563999999999997
+      },
+      {
+        "opponentId": "BHA",
+        "opponentName": "Brighton",
+        "home": 1.4084,
+        "away": 0.9766,
+        "total": 2.3850000000000002
+      },
+      {
+        "opponentId": "CHE",
+        "opponentName": "Chelsea",
+        "home": 1.5712,
+        "away": 1.1559,
+        "total": 2.7271
+      },
+      {
+        "opponentId": "COV",
+        "opponentName": "Coventry City",
+        "home": 1.8191,
+        "away": 1.353,
+        "total": 3.1721
+      },
+      {
+        "opponentId": "CRY",
+        "opponentName": "Crystal Palace",
+        "home": 1.5335,
+        "away": 1.1501,
+        "total": 2.6836
+      },
+      {
+        "opponentId": "EVE",
+        "opponentName": "Everton",
+        "home": 1.7914,
+        "away": 1.4286,
+        "total": 3.22
+      },
+      {
+        "opponentId": "FUL",
+        "opponentName": "Fulham",
+        "home": 1.5265,
+        "away": 1.1562,
+        "total": 2.6826999999999996
+      },
+      {
+        "opponentId": "HUL",
+        "opponentName": "Hull City",
+        "home": 1.7594,
+        "away": 1.3643,
+        "total": 3.1237000000000004
+      },
+      {
+        "opponentId": "LEE",
+        "opponentName": "Leeds",
+        "home": 1.652,
+        "away": 1.2597,
+        "total": 2.9116999999999997
+      },
+      {
+        "opponentId": "LIV",
+        "opponentName": "Liverpool",
+        "home": 0.9525,
+        "away": 0.6277,
+        "total": 1.5802
+      },
+      {
+        "opponentId": "MCI",
+        "opponentName": "Man City",
+        "home": 0.8192,
+        "away": 0.5225,
+        "total": 1.3417
+      },
+      {
+        "opponentId": "MUN",
+        "opponentName": "Man Utd",
+        "home": 1.3531,
+        "away": 0.9699,
+        "total": 2.323
+      },
+      {
+        "opponentId": "NEW",
+        "opponentName": "Newcastle",
+        "home": 1.8861,
+        "away": 1.4526,
+        "total": 3.3387000000000002
+      },
+      {
+        "opponentId": "NFO",
+        "opponentName": "Nott'm Forest",
+        "home": 1.7285,
+        "away": 1.3975,
+        "total": 3.126
+      },
+      {
+        "opponentId": "TOT",
+        "opponentName": "Spurs",
+        "home": 1.1068,
+        "away": 0.7503,
+        "total": 1.8571
+      },
+      {
+        "opponentId": "SUN",
+        "opponentName": "Sunderland",
+        "home": 1.9802,
+        "away": 1.5713,
+        "total": 3.5515
+      }
+    ]
+  }
+}

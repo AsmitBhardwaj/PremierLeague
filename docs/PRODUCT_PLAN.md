@@ -109,29 +109,43 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 - Benchmarks are **check-only**; don't tune against one season's table (overfitting on 17–20 clubs).
 - Known, accepted gap: FPL player data caps correlation with last season's table at ~0.45–0.5 (team context, managers, injuries aren't in the data). A possible future fix is a separate, visible **club cohesion** rating for real clubs, with the user's club starting neutral. Not now.
 
-## 8. Design system (from the agreed mockups)
+## 8. Design system (from the approved matchday mockup)
 
-Style: dark, near-monochrome, inspired by Linear/Vercel. **The pitch is the only colour.** No coloured section bands, no gradients, no emoji.
+Style: matchday TV broadcast on the grass. Green is the ground the brand stands on; cream sections give breathing room; colour tags segments and positions the way broadcasters do. Square corners, black broadcast bars and hard offset shadows. The only pattern allowed is the mowed-stripe grass; no other gradients. No emoji.
 
-| Token             | Value                                            | Use                                    |
-| ----------------- | ------------------------------------------------ | -------------------------------------- |
-| Background        | `#08090A`                                        | page                                   |
-| Surface           | `#0F1011`                                        | cards                                  |
-| Surface 2         | `#161718`                                        | rows, chips                            |
-| Raised / selected | `#1C1D1F`                                        | selected states, highlighted table row |
-| Border            | `#232428` (cards), `#1F2023` (section hairlines) |                                        |
-| Text              | `#F7F8F8`                                        | headings, primary text                 |
-| Text secondary    | `#C8CCD2`                                        | body                                   |
-| Text muted        | `#8A8F98`                                        | labels                                 |
-| Pitch / lines     | `#123326` / `#24573F`                            | the only chromatic moment              |
-| Your team         | `#F7F8F8` (white)                                | dots, highlights                       |
-| Opponents         | `#6B6F76` (grey)                                 | dots                                   |
-| Warning           | `#E3A869` on `#2A2117`                           | injuries, rule violations              |
+| Token                | Value                          | Use                                                                         |
+| -------------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| Cream                | `#F5F1E4`                      | Page ground                                                                 |
+| Paper                | `#FFFDF6`                      | Cards                                                                       |
+| Chip                 | `#EDE8D8`                      | Neutral chips and quiet controls                                            |
+| Hairline             | `#D9D2BE`                      | Rules and table separators                                                  |
+| Ink                  | `#111611`                      | Primary text and broadcast bars                                             |
+| Text secondary       | `#2E372F`                      | Body copy                                                                   |
+| Text muted           | `#4E5A50`                      | Labels and supporting text                                                  |
+| On-green secondary   | `#D6E2D3` / `#C9D3C4`          | Supporting copy and muted labels on green                                   |
+| Grass stripes        | `#1C6E3D` / `#217A44`          | Vertical bands, 96px each on full-width sections and 60px on pitch graphics |
+| Deep green           | `#0B3320`                      | Analysis ground and hard shadows                                            |
+| Pitch lines          | `rgba(245, 241, 228, 0.5)`     | Pitch markings                                                              |
+| Volt                 | `#D7F24A`                      | Primary CTA background and headline highlights on green                     |
+| Signal red           | `#E5383B`                      | `LIVE` and `BREAKING` only                                                  |
+| Transfer desk orange | `#FF6B2C`                      | Transfer-desk segment tag                                                   |
+| The analysis sky     | `#5BB8F0` / `#1A6FA8` on light | Analysis segment tag and accessible sky text on light                       |
+| Highlights           | `#D7F24A`                      | Highlights segment tag                                                      |
+| Goalkeeper           | `#FFB627`                      | `GK` wherever a position appears                                            |
+| Defender             | `#5BB8F0`                      | `DEF` wherever a position appears                                           |
+| Midfielder           | `#D7F24A`                      | `MID` wherever a position appears                                           |
+| Forward              | `#FF6B2C`                      | `FWD` wherever a position appears                                           |
+| Warning              | `#8A5A12` on `#F6E7C8`         | Injuries and rule violations                                                |
 
-- Fonts: **Barlow Condensed** (uppercase display headings, big numbers) + **Barlow** (body).
-- Primary button: white background, black text. Secondary: transparent with border.
-- Mobile-first, works on desktop; two-column layouts stack only at phone width.
-- **Legal:** no Premier League logos, club crests, kits or branding; club names in plain text only. Never mention FIFA/EA. No real player photos.
+- Position markers on a pitch always have a 2–3px ink outline.
+- Match viewer: the user's team uses its club primary colour with an ink outline, falling back to ink; opponents use cream with an ink outline. Position colours are not used in the match viewer.
+- Segment tags: Transfer desk is orange, The analysis is sky, and Highlights is volt.
+- Primary button: volt background, ink text, uppercase Oswald, minimum height 48px (64px for hero and sign-off CTAs). Secondary: ink background with cream text, or a 2px ink border on light.
+- Featured panels use a hard `14px 14px 0` offset shadow in deep green or ink. No blur shadows.
+- Fonts: **Oswald 500/600** for uppercase display headings, big numbers, labels and broadcast bars; **Archivo 400–600** for body copy and tables. Stats and tables use tabular numbers.
+- Display sizes: hero `clamp(46px, 6.2vw, 88px)`; section headings `clamp(38px, 4.6vw, 64px)`; line-height `1`.
+- Mobile-first, works on desktop; two-column layouts stack at phone width. All text must meet WCAG AA contrast (4.5:1, or 3:1 at 24px and above).
+- **Legal:** no Premier League, club or real broadcaster branding or colour schemes; no crests, kits or player photos; never mention FIFA/EA. The footer carries “Not affiliated with the Premier League or any club.”
 
 ## 9. Roadmap (build in this order, one phase at a time)
 

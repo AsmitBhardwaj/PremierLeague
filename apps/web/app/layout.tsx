@@ -1,31 +1,31 @@
 import type { Metadata } from 'next';
-import { Barlow, Barlow_Condensed } from 'next/font/google';
+import { Archivo, Oswald } from 'next/font/google';
 import type { ReactNode } from 'react';
 import './globals.css';
 
-const barlow = Barlow({
+const archivo = Archivo({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
-  variable: '--font-barlow',
+  variable: '--font-archivo',
   display: 'swap',
 });
 
-const barlowCondensed = Barlow_Condensed({
+const oswald = Oswald({
   subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-barlow-condensed',
+  weight: ['500', '600'],
+  variable: '--font-oswald',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: '21st Club — Could your XI win the league?',
+  title: '21st Club — Build your club',
   description:
     'Build a club from real Premier League players, predict its season, and play every match.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${barlow.variable} ${barlowCondensed.variable}`}>
+    <html lang="en" className={`${archivo.variable} ${oswald.variable}`}>
       <body>{children}</body>
     </html>
   );

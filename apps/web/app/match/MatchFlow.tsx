@@ -10,6 +10,7 @@ import {
   type Team,
   type TeamStats,
 } from '@pl/engine';
+import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Stat } from '../components/Stat';
@@ -74,7 +75,7 @@ function MatchHeader({ identity, stage }: { identity: ClubIdentity; stage: Match
         21ST CLUB
       </a>
       <div>
-        <span>Final Third</span>
+        <span>Matchday</span>
         <strong>{stage.replace('_', ' ')}</strong>
       </div>
       <span>{identity.shortName}</span>
@@ -89,8 +90,8 @@ function InvalidState() {
         <p className="eyebrow">Matchday unavailable</p>
         <h1>Your club save needs attention.</h1>
         <p>
-          No complete, valid Phase 3 club and starting XI could be restored. Return to the club
-          builder to repair or finish the save before kick-off.
+          No complete, valid club and starting XI could be restored. Return to the club builder to
+          repair or finish the save before kick-off.
         </p>
         <a className="button button-primary button-default" href="/play">
           Return to club builder <span aria-hidden="true">→</span>
@@ -207,7 +208,7 @@ function PreparationScreen({
             </div>
             {POSITION_ORDER.map((position) => (
               <div className="matchday-position" key={position}>
-                <span>{position}</span>
+                <span className={`position-${position.toLowerCase()}`}>{position}</span>
                 <div>
                   {starters
                     .filter((player) => player.position === position)
@@ -248,7 +249,9 @@ function PreparationScreen({
                       : ''
                   }
                 >
-                  <span>{player.position}</span>
+                  <span className={`position-${player.position.toLowerCase()}`}>
+                    {player.position}
+                  </span>
                   <strong>{player.name}</strong>
                   <small>OVR {player.overall}</small>
                 </button>
@@ -580,7 +583,9 @@ function HalfTimeScreen({
               return (
                 <div key={player.id}>
                   <span>{player.name}</span>
-                  <small>{player.position}</small>
+                  <small className={`inline-position position-${player.position.toLowerCase()}`}>
+                    {player.position}
+                  </small>
                   <strong>{marketPlayer.overall ?? '—'}</strong>
                   <span>{Math.round(state.stamina)}% fit</span>
                 </div>
@@ -746,11 +751,11 @@ function FullTimeScreen({ result, home, away }: { result: MatchResult; home: Tea
           type="button"
           className="button button-primary button-default"
           disabled
-          title="League table arrives in Phase 5"
+          title="League table coming soon"
         >
           Continue to league table <span aria-hidden="true">→</span>
         </button>
-        <span>Season table and fixture persistence arrive in Phase 5.</span>
+        <span>Season table and fixture persistence are coming soon.</span>
       </div>
     </section>
   );
@@ -859,7 +864,10 @@ export function MatchFlow() {
     : [];
 
   return (
-    <main className="match-shell">
+    <main
+      className="match-shell"
+      style={{ '--club-primary': preparation.identity.primaryColor } as CSSProperties}
+    >
       <MatchHeader identity={preparation.identity} stage={stage} />
       {stage === 'preparation' ? (
         <PreparationScreen

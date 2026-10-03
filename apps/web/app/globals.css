@@ -2933,3 +2933,63 @@ h3,
     white-space: nowrap;
   }
 }
+
+/* Phone CTAs: a compact nav button, and a bar once the hero CTA has scrolled away. */
+.sticky-cta {
+  display: none;
+}
+
+@media (max-width: 430px) {
+  .landing-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .landing-nav > .button {
+    min-height: 44px;
+    padding: 0 14px;
+    display: inline-flex;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .sticky-cta {
+    padding: 8px max(14px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: block;
+    background: var(--ink);
+    border-top: 3px solid var(--volt);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 160ms steps(4, end),
+      visibility 0s linear 160ms;
+  }
+
+  .sticky-cta.visible {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .sticky-cta .button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  html[data-sticky-cta='on'] body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-cta {
+    transition: none;
+  }
+}

@@ -1,4 +1,5 @@
 import { HeroMatch } from './components/HeroMatch';
+import { StickyCta } from './components/StickyCta';
 import sampleData from './data/landing-sample.json';
 import playerData from './play/data/players.json';
 import {
@@ -278,7 +279,7 @@ export default function Home() {
             <span>Your career starts today</span>
             <p>Name your club, sign {SQUAD_SIZE} players, and see where you&apos;ll finish.</p>
           </div>
-          <a className="button button-primary button-hero" href="/play">
+          <a className="button button-primary button-hero" id="hero-cta" href="/play">
             Start your career <Arrow />
           </a>
         </div>
@@ -407,7 +408,7 @@ export default function Home() {
             Your club. Your career.
             <span>Your name on the trophy.</span>
           </h2>
-          <a className="button button-primary button-hero" href="/play">
+          <a className="button button-primary button-hero" id="signoff-cta" href="/play">
             Start your career <Arrow />
           </a>
         </div>
@@ -419,6 +420,7 @@ export default function Home() {
           <p>Not affiliated with the Premier League or any club.</p>
         </div>
       </footer>
+      <StickyCta />
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Archivo, Oswald } from 'next/font/google';
 import type { ReactNode } from 'react';
 import './globals.css';
@@ -16,6 +16,9 @@ const oswald = Oswald({
   variable: '--font-oswald',
   display: 'swap',
 });
+
+/** `cover` lets the phone CTA bar respect safe-area insets via env(). */
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export const metadata: Metadata = {
   title: '21st Club — A football career mode in your browser',

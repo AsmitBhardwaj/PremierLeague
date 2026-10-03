@@ -78,6 +78,11 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
    - **Backup goalkeepers:** a keeper who has not featured this season (under half the minutes the busiest player has) starts from a backup-level prior.
    - **Club context:** each stat is measured relative to its club's level (volume stats such as tackles, clearances and recoveries almost fully; output stats lightly), so a dominant side's defenders are not marked down for facing fewer attacks.
    - **No "no top-flight history" discount.** Earlier versions rated players without top-flight history below average. This was removed deliberately: promoted clubs' starters all have thin data, and the discount rated them far too low (the bottom club fell to about 12 points). Players with thin data now simply shrink toward the positional average.
+   - **Constants retuned with the evidence model** (each to keep a §7 guardrail, found by sweeping against `calibrate-season`):
+     - Defender defensive share 0.5 → 0.8 and volume-stat club context 0.15 → 0.7: FPL's priciest defenders play for dominant sides and make few tackles, so volume stats marked them down; correcting for club level raised defenders' agreement with FPL's price ranking (top 10 by overall that are in the position's top 20 by price: 2/10 → 6/10; the remaining gap is accepted).
+     - Goalkeeper goalkeeping base 10 → 16: shrinkage compresses keepers toward the average, which raised scoring; the higher base restores about 2.8 goals per game without lifting keepers who have no evidence (the backup prior handles them).
+     - Forward shooting base 8 → 2: recentres goals per game (2.88 → 2.77) and moves draws into the 23–25% range.
+     - Rating curve: above-knee slope 0.22 → 0.3 (restores champion points to 85+) and below-knee slope 2.0 → 1.9 (keeps the bottom club near 23 points).
 2. **Match engine.** Event-based simulation; better players win more duels; upsets still happen.
 3. **Monte Carlo.** Simulate the season **10,000 times** with different seeds and count outcomes:
    - predicted points = average points across simulations

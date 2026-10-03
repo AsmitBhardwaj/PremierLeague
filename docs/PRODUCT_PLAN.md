@@ -144,7 +144,7 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 - Match viewer: the user's team uses its club primary colour with an ink outline, falling back to ink; opponents use cream with an ink outline. Position colours are not used in the match viewer.
 - Segment tags: Transfer desk is orange, Your season is sky, Highlights is volt, and How it works is a neutral chip.
 - Body text is at least 16px at 390px wide and 18px at 1440px wide. Labels and tags are at least 12px.
-- Visual reference: `docs/design/landing-mockup.html` is a saved snapshot of the landing markup only (no styles, so it will not render as designed). The rendered design reference is the local, gitignored `21st Club — Landing Page.pdf`. Copy and structure in this plan and the task override both.
+- The live landing page is the visual reference for the design system; the earlier mockup is superseded.
 - Primary button: volt background, ink text, uppercase Oswald, minimum height 48px (64px for hero and sign-off CTAs). Secondary: ink background with cream text, or a 2px ink border on light.
 - Featured panels use a hard `14px 14px 0` offset shadow in deep green or ink. No blur shadows.
 - Fonts: **Oswald 500/600** for uppercase display headings, big numbers, labels and broadcast bars; **Archivo 400–600** for body copy and tables. Stats and tables use tabular numbers.

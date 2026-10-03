@@ -71,14 +71,20 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 
 ## 5. How the prediction works
 
-1. **Players → ratings.** FPL stats (xG, xA, creativity, threat, defensive actions, saves, minutes) are mapped to 0–100 engine ratings by **global rules** in `ratings.ts`, with shrinkage for low-minute players and a lower prior for players without top-flight history.
+1. **Players → ratings.** FPL stats (xG, xA, creativity, threat, defensive actions, saves, minutes) are mapped to 0–100 engine ratings by **global rules** in `ratings.ts`:
+   - **Evidence:** per-90 rates are pooled over this season and the last three, weighted by minutes (this season 1, last season 0.5, the one before 0.25). Last season counts as much per minute as this one, so early in a season it is most of the evidence.
+   - **Shrinkage by evidence:** each rating is standardised against well-evidenced players, then pulled toward the positional average by `m / (m + K)`, where `m` is the minutes behind it and `K` is how many minutes of evidence are worth as much as the average. `K` comes from how stable each kind of stat is from one season to the next: xG, threat and ICT are stable; goals, assists and, above all, goals prevented (the goalkeeper signal, season-to-season r about 0.3) are mostly noise, so goalkeeping gets the largest `K` (8,000 minutes). A thin sample can also never move a rating more than its evidence allows, and an extreme small-sample stat cannot rank above a regular with strong two-season evidence.
+   - **Price prior (outfield only):** FPL price is a weak crowd-sourced prior, a within-position z-score that can move any outfield rating by at most about 5 points. Goalkeepers get none: their price range is too narrow to carry information.
+   - **Backup goalkeepers:** a keeper who has not featured this season (under half the minutes the busiest player has) starts from a backup-level prior.
+   - **Club context:** each stat is measured relative to its club's level (volume stats such as tackles, clearances and recoveries almost fully; output stats lightly), so a dominant side's defenders are not marked down for facing fewer attacks.
+   - **No "no top-flight history" discount.** Earlier versions rated players without top-flight history below average. This was removed deliberately: promoted clubs' starters all have thin data, and the discount rated them far too low (the bottom club fell to about 12 points). Players with thin data now simply shrink toward the positional average.
 2. **Match engine.** Event-based simulation; better players win more duels; upsets still happen.
 3. **Monte Carlo.** Simulate the season **10,000 times** with different seeds and count outcomes:
    - predicted points = average points across simulations
    - title % = share of simulations finishing 1st
    - most likely finish = most frequent position
    - the points histogram on the prediction screen is those totals plotted
-4. **Speed.** Predictions use a **fast surrogate model** fitted to the event engine (team ratings → `expectedGoals` → independent Poisson goal counts for each side, with home advantage via the `isHome` term; there is no Dixon-Coles correction). The 342 matches between the 19 real clubs are **precomputed** once; per prediction only the user's 38 matches are simulated. Watched matches use the **full event engine**. Because the surrogate is fitted to the engine, they agree.
+4. **Speed.** Predictions use a **fast surrogate model** fitted to the event engine (team ratings → `expectedGoals` → independent Poisson goal counts for each side, with home advantage via the `isHome` term; there is no Dixon-Coles correction). The 342 matches between the 19 real clubs are **precomputed** once; per prediction only the user's 38 matches are simulated. Watched matches use the **full event engine**. Because the surrogate is fitted to the engine, they agree. The surrogate parameters and the precomputed background must be refit and regenerated whenever ratings change (`fit-surrogate`, `generate-season-background`, then `sanity-predict-season`: RMSE vs the event engine is 3.1 points).
 
 ## 6. Architecture
 
@@ -109,15 +115,17 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 
 | Metric                                       | Target                           | Current                   |
 | -------------------------------------------- | -------------------------------- | ------------------------- |
-| Goals per game                               | ~2.8                             | 2.75                      |
-| Draws                                        | 23–25%                           | 23.6%                     |
-| Goals distribution                           | Poisson-shaped, 7+ goals ~2–2.5% | 2.4%                      |
-| Red cards per game                           | ~0.1                             | ~0.12                     |
-| Favourite's title %                          | 45–65%                           | 63.5%                     |
-| Champion / 4th / 18th / 20th pts             | 85–90 / ~70 / ~35 / 20–27        | 84.7 / 68.3 / 35.2 / 25.7 |
-| Highest relegation rate                      | under ~90%                       | 87.5%                     |
-| Spearman vs Opta 2026/27 pre-season forecast | check only                       | 0.839                     |
-| Spearman vs real 2025/26 table               | check only                       | 0.489                     |
+| Goals per game                               | ~2.8                             | 2.77                      |
+| Draws                                        | 23–25%                           | 23.1%                     |
+| Goals distribution                           | Poisson-shaped, 7+ goals ~2–2.5% | 2.3%                      |
+| Red cards per game                           | ~0.1                             | ~0.11                     |
+| Favourite's title %                          | 45–65%                           | 59.0%                     |
+| Champion / 4th / 18th / 20th pts             | 85–90 / ~70 / ~35 / 20–27        | 85.4 / 68.5 / 32.9 / 23.0 |
+| Highest relegation rate                      | under ~90%                       | 85.0%                     |
+| Spearman vs Opta 2026/27 pre-season forecast | check only                       | 0.926                     |
+| Spearman vs real 2025/26 table               | check only                       | 0.463                     |
+
+_Known soft gap:_ the 18th-placed side averages 32.9 points against a ~35 target (about 2 points under). Steepening or flattening the bottom of the rating curve moved it by less than a point while breaking the 20th-place and relegation-rate guardrails, so it is accepted rather than tuned further. Both calibration scripts were run at their standard sizes (`calibrate` 1,000 matches, `calibrate-season` 200 seasons).
 
 _Reference only, not a guardrail:_ `calibrate` (1,000 matches between synthetic teams) currently reports 2.70 goals per game and 25.6% draws. It measures a different population from `calibrate-season`, so it is not comparable to the table above and is not a regression.
 

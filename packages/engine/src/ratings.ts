@@ -39,6 +39,8 @@ export interface FplElementRaw extends FplSeasonRaw {
   element_type: number;
   /** "a" available, "i" injured, "s" suspended, "d" doubtful, "u" unavailable (left the league) */
   status: string;
+  /** Price in tenths of £m. */
+  now_cost?: Num;
 }
 
 export interface FplBootstrapRaw {
@@ -75,6 +77,8 @@ export interface RatingInput {
   clubId: number;
   position: Position;
   status: string;
+  /** FPL price in tenths of £m: a weak crowd-sourced quality prior for outfield players only. */
+  price?: number;
   current: SeasonTotals;
   /** Previous seasons, most recent first. */
   past: SeasonTotals[];
@@ -100,7 +104,7 @@ export const RATING_MAP = {
       tackling: -25,
       positioning: 0,
       pace: -20,
-      goalkeeping: 10,
+      goalkeeping: 16,
     },
     DEF: {
       passing: -4,
@@ -123,7 +127,7 @@ export const RATING_MAP = {
     FWD: {
       passing: -4,
       dribbling: 5,
-      shooting: 8,
+      shooting: 2,
       tackling: -22,
       positioning: -8,
       pace: 4,
@@ -140,24 +144,49 @@ export const RATING_MAP = {
     positioning: 8,
     pace: 5,
   },
-  /** Minutes of evidence worth as much as the positional average (shrinkage strength). */
-  priorMinutes: 700,
-  /**
-   * Prior for players without top-flight history: a player the league has not yet seen is not an
-   * average Premier League player (most arrive from weaker leagues and are less proven), so his
-   * shrinkage target sits `unprovenPriorZ` standard deviations below the positional mean. The
-   * discount fades linearly to nothing as his earlier-seasons minutes reach `provenMinutes`.
-   */
-  unprovenPriorZ: 0.25,
-  provenMinutes: 1800,
   /** Weighted minutes a player needs to count towards the positional norms. */
   normMinMinutes: 900,
-  /** Recency weights for the last three seasons in history_past. */
-  pastWeights: [1, 0.25, 0.05] as readonly number[],
-  /** Current-season minutes at which history_past is worth its minimum weight. */
+  /**
+   * Recency weights for the last three seasons in history_past, relative to the current season.
+   * Everything is per-90 and weighted by minutes, so last season counts as much per minute as this
+   * one (early in a season it is simply most of the evidence).
+   */
+  pastWeights: [1, 0.5, 0.25] as readonly number[],
+  /** Weighted minutes of a regular season: the yardstick for the regulars' minutes nudge. */
   fullSeasonMinutes: 3000,
-  minPastScale: 0.3,
+  /**
+   * Evidence-based shrinkage. Each rating is standardised on well-evidenced players and then pulled
+   * toward the positional average by rho = m / (m + K), with m the (weighted) minutes behind it and
+   * K the minutes of evidence worth as much as the prior. K comes from how stable each kind of stat
+   * is from one season to the next: xG, threat and ICT are stable; goals, assists and above all
+   * goals prevented (the goalkeeper signal, season-to-season r ~ 0.3) are mostly noise.
+   */
+  reliabilityMinutes: {
+    shooting: 1400,
+    passing: 2200,
+    dribbling: 1200,
+    tackling: 1600,
+    goalkeeping: 8000,
+    positioning: 1600,
+    pace: 1000,
+  },
+  /** Weighted minutes at which a player's rating may reach the full +/- maxZ standard deviations. */
+  fullEvidenceMinutes: 2700,
   maxZ: 1.4,
+  /**
+   * Weak prior from FPL price (a crowd-sourced quality signal) for outfield players: the shrinkage
+   * target moves `weight` standard deviations per within-position price z-score, capped so it can
+   * move any rating by at most `maxPoints`. Goalkeepers get none: their price range is too narrow
+   * to carry information, so their ratings come from their own (heavily shrunk) data alone.
+   */
+  pricePrior: { weight: 0.3, maxPoints: 5 },
+  /**
+   * A goalkeeper who has not featured this season (less than `featuredShare` of the minutes the
+   * busiest player has played) is a backup until his data says otherwise: his shrinkage target sits
+   * `backupPriorZ` standard deviations below the average keeper. Only one keeper plays, so this
+   * never touches a club's starter; it stops unproven reserves rating like first choices.
+   */
+  goalkeeperBackup: { priorZ: 0.5, featuredShare: 0.5 },
   /**
    * Shape of the z -> rating curve (piecewise linear, an average player stays at 0):
    *  - below `knee` standard deviations it is `belowKneeSlope` steep: a club's starting XI is the
@@ -169,10 +198,8 @@ export const RATING_MAP = {
    * Player ordering never changes, only how far apart the ratings sit.
    */
   knee: 0.7,
-  belowKneeSlope: 2,
-  aboveKneeSlope: 0.22,
-  /** Weighted minutes at which a player's rating may reach the full +/- maxZ standard deviations. */
-  fullEvidenceMinutes: 1800,
+  belowKneeSlope: 1.9,
+  aboveKneeSlope: 0.3,
   /** Rating points per 1.0 of (minutes/3000 - 0.5): regulars are trusted slightly more. */
   minutesNudge: 4,
   /**
@@ -185,10 +212,12 @@ export const RATING_MAP = {
     /** Output stats (goals, assists, xG, xA, creativity, threat, ICT) vs the club's xG per 90. */
     attack: 0.1,
     /** Volume stats (tackles, CBI, recoveries, saves) vs the club's xGC per 90: defending more = more of them. */
-    defenceVolume: 0.15,
+    defenceVolume: 0.7,
     /** The xGC a player is on the pitch for is almost entirely the team; only part counts as his own. */
     conceded: 0.3,
   },
+  /** How much of positioning is the side's defensive record (xGC) rather than the player's ICT. */
+  defenceShare: { GK: 0, DEF: 0.8, MID: 0.25, FWD: 0 },
   /** Weight of per-90 individual-quality metrics vs raw totals inside each composite. */
   weights: {
     /** shooting = xg * w + goals * (1 - w): finishing luck and penalties are noise, xG is not. */
@@ -242,6 +271,7 @@ export function toRatingInputs(
       clubId: e.team,
       position,
       status: e.status,
+      price: num(e.now_cost) || undefined,
       current: parseSeason(e),
       past,
     });
@@ -301,24 +331,17 @@ function seasonHas(group: MinutesGroup, s: SeasonTotals): boolean {
 interface Pool {
   /** Recency-weighted minutes per group. */
   minutes: Record<MinutesGroup, number>;
-  /** Unweighted minutes from earlier seasons (history_past): his top-flight track record. */
-  pastMinutes: number;
   sums: Record<MetricKey, number>;
 }
 
 function poolFor(input: RatingInput): Pool {
-  const pastScale = Math.max(
-    RATING_MAP.minPastScale,
-    Math.min(1, 1 - input.current.minutes / RATING_MAP.fullSeasonMinutes),
-  );
   const seasons: { s: SeasonTotals; w: number }[] = [{ s: input.current, w: 1 }];
   input.past.slice(0, RATING_MAP.pastWeights.length).forEach((s, i) => {
-    seasons.push({ s, w: (RATING_MAP.pastWeights[i] ?? 0) * pastScale });
+    seasons.push({ s, w: RATING_MAP.pastWeights[i] ?? 0 });
   });
 
   const pool: Pool = {
     minutes: { all: 0, xg: 0, def: 0, gk: 0 },
-    pastMinutes: input.past.reduce((a, s) => a + s.minutes, 0),
     sums: Object.fromEntries(METRIC_KEYS.map((k) => [k, 0])) as Record<MetricKey, number>,
   };
   for (const { s, w } of seasons) {
@@ -430,16 +453,19 @@ export interface Norms {
   composites: Record<Position, Record<CompositeKey, Norm>>;
   /** Club id -> level used to make that club's players' stats club-relative. */
   clubs: ReadonlyMap<number, ClubLevel>;
+  /** Per-position mean/sd of ln(price): the price prior is a within-position z-score. */
+  price: Record<Position, Norm>;
+  /** Most minutes anyone has played this season (matches played x 90). */
+  seasonMinutes: number;
 }
 
-/** Shrunk z-score of one metric: evidence is blended with the positional mean by minutes played. */
+/**
+ * Raw (unshrunk) z-score of one metric. A player with no minutes behind it has no evidence and
+ * sits at the positional average; shrinkage by evidence happens per rating in `ratePlayer`.
+ */
 function z(pool: Pool, norm: Norm, k: MetricKey, level: ClubLevel): number {
   const { rate, minutes } = rate90(pool, k, level);
-  const unproven = Math.max(0, 1 - pool.pastMinutes / RATING_MAP.provenMinutes);
-  const prior = norm.mean - RATING_MAP.unprovenPriorZ * unproven * norm.sd;
-  const shrunk =
-    (rate * minutes + prior * RATING_MAP.priorMinutes) / (minutes + RATING_MAP.priorMinutes);
-  return (shrunk - norm.mean) / norm.sd;
+  return minutes > 0 ? (rate - norm.mean) / norm.sd : 0;
 }
 
 /** Blend several metric z-scores into one raw (not yet standardised) composite per rating. */
@@ -454,7 +480,7 @@ function rawComposites(
   const gk = position === 'GK';
   // Tackle/recovery counts are *higher* for sides that defend more, so on their own they would
   // rate dominant clubs' defenders poorly. Conceding less than average (xGC) credits them instead.
-  const defenceShare = { GK: 0, DEF: 0.5, MID: 0.25, FWD: 0 }[position];
+  const defenceShare = RATING_MAP.defenceShare[position];
   return {
     // Per-90 quality (xG, xA, creativity) outweighs raw totals (goals, assists), which also depend
     // on finishing luck and on how many chances the team supplies.
@@ -493,6 +519,16 @@ export function computeNorms(inputs: readonly RatingInput[]): Norms {
     metrics[position] = byMetric;
   }
 
+  const price = {} as Norms['price'];
+  for (const position of ['GK', 'DEF', 'MID', 'FWD'] as const) {
+    const logs = inputs
+      .filter((i) => i.position === position && i.price)
+      .map((i) => Math.log(i.price!));
+    const mean = logs.reduce((a, v) => a + v, 0) / (logs.length || 1);
+    const variance = logs.reduce((a, v) => a + (v - mean) ** 2, 0) / (logs.length || 1);
+    price[position] = { mean, sd: Math.sqrt(variance) || 1 };
+  }
+
   const composites = {} as Norms['composites'];
   for (const position of ['GK', 'DEF', 'MID', 'FWD'] as const) {
     const raws = inputs
@@ -509,10 +545,22 @@ export function computeNorms(inputs: readonly RatingInput[]): Norms {
     }
     composites[position] = byKey;
   }
-  return { metrics, composites, clubs };
+  const seasonMinutes = Math.max(0, ...inputs.map((i) => i.current.minutes));
+  return { metrics, composites, clubs, price, seasonMinutes };
 }
 
 // ------------------------------------------------------------------ ratings
+
+/** Which evidence group (minutes with usable data) each rating is shrunk by. */
+const RATING_GROUP: Record<CompositeKey, MinutesGroup> = {
+  shooting: 'xg',
+  passing: 'xg',
+  dribbling: 'all',
+  tackling: 'def',
+  goalkeeping: 'gk',
+  positioning: 'all',
+  pace: 'all',
+};
 
 const clampRating = (v: number): number => Math.round(Math.min(99, Math.max(1, v)));
 
@@ -532,12 +580,33 @@ export function ratePlayer(input: RatingInput, norms: Norms): PlayerRatings {
     norms.metrics[input.position],
     norms.clubs.get(input.clubId) ?? NEUTRAL_LEVEL,
   );
-  // Thin evidence also caps how far a rating can stray, however extreme the per-90 numbers are.
-  const cap =
-    RATING_MAP.maxZ * Math.sqrt(Math.min(1, pool.minutes.all / RATING_MAP.fullEvidenceMinutes));
+  // Thin evidence also caps how far the data can move a rating, however extreme the per-90
+  // numbers are; the prior below is never clipped by it.
+  const cap = RATING_MAP.maxZ * Math.min(1, pool.minutes.all / RATING_MAP.fullEvidenceMinutes);
+  const priceZ =
+    input.position !== 'GK' && input.price
+      ? (Math.log(input.price) - norms.price[input.position].mean) / norms.price[input.position].sd
+      : 0;
   const cz = (k: CompositeKey): number => {
     const n = norms.composites[input.position][k];
-    return warpZ(Math.max(-cap, Math.min(cap, (raw[k] - n.mean) / n.sd)));
+    const m = pool.minutes[RATING_GROUP[k]];
+    const rho = m / (m + RATING_MAP.reliabilityMinutes[k]);
+    // Price prior: at most `maxPoints` rating points however extreme the price.
+    const priceCap =
+      RATING_MAP.pricePrior.maxPoints / (RATING_MAP.spread[k] * RATING_MAP.belowKneeSlope);
+    const featured =
+      norms.seasonMinutes > 0
+        ? Math.min(
+            1,
+            input.current.minutes / norms.seasonMinutes / RATING_MAP.goalkeeperBackup.featuredShare,
+          )
+        : 1;
+    const backup =
+      input.position === 'GK' ? RATING_MAP.goalkeeperBackup.priorZ * (1 - featured) : 0;
+    const prior =
+      Math.max(-priceCap, Math.min(priceCap, RATING_MAP.pricePrior.weight * priceZ)) - backup;
+    const observed = Math.max(-cap, Math.min(cap, (rho * (raw[k] - n.mean)) / n.sd));
+    return warpZ(observed + (1 - rho) * prior);
   };
   const base = RATING_MAP.base[input.position];
   const { spread, anchor } = RATING_MAP;

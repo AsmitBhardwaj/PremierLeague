@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildClubs,
+  overall,
   RATING_MAP,
   rateAll,
   simulateMatch,
@@ -104,7 +105,7 @@ describe('FPL rating mapping', () => {
     expect(flash.player.ratings.shooting).toBeLessThan(average + 0.85 * elite);
   });
 
-  it('rates a player with no top-flight history below an identical proven one', () => {
+  it('trusts a longer track record more than an identical short one (less shrinkage)', () => {
     const { bootstrap, summaries } = fixture();
     const output = { xg: 0.4, goals: 0.4 };
     const unproven = element(3, 4, season(450, output));
@@ -138,6 +139,92 @@ describe('FPL rating mapping', () => {
         expect(v).toBeLessThanOrEqual(99);
       }
     }
+  });
+});
+
+describe('evidence and priors', () => {
+  const ratingsOf = (rated: ReturnType<typeof rateAll>, id: number) =>
+    rated.find((r) => r.input.id === id)!.player.ratings;
+
+  it('is deterministic', () => {
+    const { bootstrap, summaries } = fixture();
+    const a = rateAll(toRatingInputs(bootstrap, summaries));
+    const b = rateAll(toRatingInputs(bootstrap, summaries));
+    expect(a.map((r) => r.player)).toEqual(b.map((r) => r.player));
+  });
+
+  it('never lets an extreme small sample outrank a regular with strong two-season evidence', () => {
+    const { bootstrap, summaries } = fixture();
+    const flash = element(4, 4, season(200, { xg: 3, goals: 4, xa: 1.5, ast: 2 }));
+    const regular = element(4, 4, season(2800, { xg: 0.55, goals: 0.55, xa: 0.35, ast: 0.35 }));
+    bootstrap.elements.push(flash, regular);
+    summaries.set(regular.id, {
+      history_past: [
+        season(2900, { xg: 0.55, goals: 0.55, xa: 0.35, ast: 0.35 }),
+        season(2800, { xg: 0.55, goals: 0.55, xa: 0.35, ast: 0.35 }),
+      ],
+    });
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    expect(ratingsOf(rated, flash.id).shooting).toBeLessThan(ratingsOf(rated, regular.id).shooting);
+    expect(overall('FWD', ratingsOf(rated, flash.id))).toBeLessThan(
+      overall('FWD', ratingsOf(rated, regular.id)),
+    );
+  });
+
+  it('never lets a thin goalkeeper sample outrank a proven keeper', () => {
+    const { bootstrap, summaries } = fixture();
+    const stats = (minutes: number, savesPer90: number, xgcPer90: number): FplSeasonRaw => ({
+      ...season(minutes, {}),
+      saves: Math.round((minutes / 90) * savesPer90),
+      expected_goals_conceded: String((minutes / 90) * xgcPer90),
+      goals_conceded: 0,
+    });
+    const flash = element(5, 1, stats(180, 9, 2.5));
+    const proven = element(5, 1, stats(3000, 3.6, 1.4));
+    bootstrap.elements.push(flash, proven);
+    summaries.set(proven.id, { history_past: [stats(3000, 3.6, 1.4), stats(3000, 3.6, 1.4)] });
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    expect(ratingsOf(rated, flash.id).goalkeeping).toBeLessThan(
+      ratingsOf(rated, proven.id).goalkeeping + 1,
+    );
+    expect(ratingsOf(rated, flash.id).goalkeeping).toBeLessThan(80);
+  });
+
+  it('ignores FPL price for goalkeepers', () => {
+    const { bootstrap, summaries } = fixture();
+    const cheap = element(6, 1, season(2400, {}), { now_cost: 40 });
+    const dear = element(6, 1, season(2400, {}), { now_cost: 60 });
+    bootstrap.elements.push(cheap, dear);
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    expect(ratingsOf(rated, cheap.id)).toEqual(ratingsOf(rated, dear.id));
+  });
+
+  it('moves an outfield rating by at most about five points through price', () => {
+    const { bootstrap, summaries } = fixture();
+    const cheap = element(7, 3, season(300, {}), { now_cost: 40 });
+    const dear = element(7, 3, season(300, {}), { now_cost: 140 });
+    bootstrap.elements.push(cheap, dear);
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    const a = ratingsOf(rated, cheap.id);
+    const b = ratingsOf(rated, dear.id);
+    for (const key of Object.keys(a) as (keyof typeof a)[]) {
+      expect(Math.abs(b[key] - a[key])).toBeLessThanOrEqual(11);
+    }
+    expect(b.passing).toBeGreaterThan(a.passing);
+  });
+
+  it('rates a goalkeeper who has not featured this season below a first choice with equal data', () => {
+    const { bootstrap, summaries } = fixture();
+    const output = season(2000, {});
+    const starter = element(8, 1, season(450, {}));
+    const reserve = element(8, 1, season(0, {}));
+    bootstrap.elements.push(starter, reserve);
+    summaries.set(starter.id, { history_past: [output, output] });
+    summaries.set(reserve.id, { history_past: [output, output] });
+    const rated = rateAll(toRatingInputs(bootstrap, summaries));
+    expect(ratingsOf(rated, reserve.id).goalkeeping).toBeLessThan(
+      ratingsOf(rated, starter.id).goalkeeping,
+    );
   });
 });
 

@@ -869,6 +869,9 @@ function PredictionStep({
         <button className="button button-secondary button-default" type="button" onClick={onBack}>
           ← Change starting XI
         </button>
+        <a className="button button-primary button-default" href="/match">
+          Start season <span aria-hidden="true">→</span>
+        </a>
       </div>
     </section>
   );

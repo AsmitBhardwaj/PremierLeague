@@ -14,6 +14,8 @@ export const dynamic = 'force-static';
 const { club: sampleClub, prediction: samplePrediction } = sampleData;
 /** The opponent in the checked-in sample match (see scripts/src/generate-landing-match.ts). */
 const landingAwayName = 'Brighton';
+/** Presentation only: the sample club's primary colour in the match preview. */
+const SAMPLE_CLUB_COLOUR = '#FF6B2C';
 const likelyPosition = samplePrediction.positionDistribution.reduce((best, row) =>
   row.probability > best.probability ? row : best,
 ).position;
@@ -265,7 +267,11 @@ export default function Home() {
               <li>Plays on your phone</li>
             </ul>
           </div>
-          <HeroMatch homeName={sampleClub.name} awayName={landingAwayName} />
+          <HeroMatch
+            homeName={sampleClub.name}
+            awayName={landingAwayName}
+            clubColour={SAMPLE_CLUB_COLOUR}
+          />
         </div>
         <div className="hero-lower-third page-shell">
           <div>

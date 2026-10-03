@@ -2,6 +2,7 @@
 
 import type { MatchEvent } from '@pl/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { userDotColour } from '../match/lib/colours';
 import { useHighlightsPitch } from '../match/components/useHighlightsPitch';
 import {
   MATCH_BUDGET_MS,
@@ -26,7 +27,12 @@ export interface LandingMatch {
 
 const END_PAUSE_MS = 2_500;
 
-function Replay({ data, reducedMotion }: { data: LandingMatch; reducedMotion: boolean }) {
+export interface PlayerProps {
+  reducedMotion: boolean;
+  clubColour: string;
+}
+
+function Replay({ data, reducedMotion, clubColour }: PlayerProps & { data: LandingMatch }) {
   const { events, home, away } = data;
   const schedule = useMemo(() => buildSchedule(events, MATCH_BUDGET_MS), [events]);
   const bannerEntries = useMemo(() => bannerEntriesOf(schedule), [schedule]);
@@ -37,8 +43,7 @@ function Replay({ data, reducedMotion }: { data: LandingMatch; reducedMotion: bo
     home,
     away,
     userSide: 'home',
-    // The sample club has no colour of its own, so it takes the design system's ink fallback.
-    userColour: undefined,
+    userColour: clubColour,
   });
   const [ui, setUi] = useState<{ revealed: number; banner: (Banner & { key: number }) | null }>({
     revealed: reducedMotion ? events.length : 0,
@@ -104,7 +109,14 @@ function Replay({ data, reducedMotion }: { data: LandingMatch; reducedMotion: bo
     <>
       <div className="hm-bug" aria-hidden="true">
         <span className="hm-tag">Sample match</span>
-        <span className="hm-team">{home.name}</span>
+        <span className="hm-team">
+          <i
+            className="hm-swatch"
+            style={{ background: userDotColour(clubColour) }}
+            aria-hidden="true"
+          />
+          {home.name}
+        </span>
         <strong className="hm-score">
           {score.home}–{score.away}
         </strong>
@@ -129,7 +141,7 @@ function Replay({ data, reducedMotion }: { data: LandingMatch; reducedMotion: bo
   );
 }
 
-export function HeroMatchPlayer({ reducedMotion }: { reducedMotion: boolean }) {
+export function HeroMatchPlayer({ reducedMotion, clubColour }: PlayerProps) {
   const [data, setData] = useState<LandingMatch | null>(null);
 
   useEffect(() => {
@@ -145,5 +157,5 @@ export function HeroMatchPlayer({ reducedMotion }: { reducedMotion: boolean }) {
     };
   }, []);
 
-  return data ? <Replay data={data} reducedMotion={reducedMotion} /> : null;
+  return data ? <Replay data={data} reducedMotion={reducedMotion} clubColour={clubColour} /> : null;
 }

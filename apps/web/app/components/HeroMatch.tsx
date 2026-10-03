@@ -1,13 +1,23 @@
 'use client';
 
 import { useEffect, useState, type ComponentType } from 'react';
+import { userDotColour } from '../match/lib/colours';
+import type { PlayerProps } from './HeroMatchPlayer';
 
 /**
  * The hero's studio screen. The frame, names and an empty striped pitch render instantly with the
  * page; the replay itself (renderer + a checked-in engine timeline) loads lazily when idle.
  */
-export function HeroMatch({ homeName, awayName }: { homeName: string; awayName: string }) {
-  const [Player, setPlayer] = useState<ComponentType<{ reducedMotion: boolean }> | null>(null);
+export function HeroMatch({
+  homeName,
+  awayName,
+  clubColour,
+}: {
+  homeName: string;
+  awayName: string;
+  clubColour: string;
+}) {
+  const [Player, setPlayer] = useState<ComponentType<PlayerProps> | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -42,12 +52,19 @@ export function HeroMatch({ homeName, awayName }: { homeName: string; awayName: 
       </div>
       <div className="hm-stage">
         {Player ? (
-          <Player reducedMotion={reducedMotion} />
+          <Player reducedMotion={reducedMotion} clubColour={clubColour} />
         ) : (
           <>
             <div className="hm-bug" aria-hidden="true">
               <span className="hm-tag">Sample match</span>
-              <span className="hm-team">{homeName}</span>
+              <span className="hm-team">
+                <i
+                  className="hm-swatch"
+                  style={{ background: userDotColour(clubColour) }}
+                  aria-hidden="true"
+                />
+                {homeName}
+              </span>
               <strong className="hm-score">0–0</strong>
               <span className="hm-team">{awayName}</span>
               <time>0&apos;</time>

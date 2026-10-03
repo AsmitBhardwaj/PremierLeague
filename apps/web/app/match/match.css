@@ -7,6 +7,7 @@
 }
 
 .mt-header {
+  padding-top: env(safe-area-inset-top);
   background: var(--ink);
   color: var(--cream);
 }
@@ -61,7 +62,7 @@
 }
 
 .mt-recovery {
-  padding-block: 72px;
+  padding-block: 72px calc(72px + env(safe-area-inset-bottom));
 }
 
 .mt-recovery h1 {
@@ -617,6 +618,7 @@
 
 /* Kick off bar: always visible */
 .mt-kickoff-bar {
+  padding-bottom: env(safe-area-inset-bottom);
   position: sticky;
   bottom: 0;
   z-index: 20;
@@ -777,7 +779,7 @@
 
 /* Match viewer */
 .mv {
-  padding-block: 24px 40px;
+  padding-block: 24px calc(40px + env(safe-area-inset-bottom));
 }
 
 .mv-bug,
@@ -1088,7 +1090,7 @@
 /* Half-time and full-time */
 .ht,
 .ft {
-  padding-block: 28px 48px;
+  padding-block: 28px calc(48px + env(safe-area-inset-bottom));
 }
 
 .ht-bug {

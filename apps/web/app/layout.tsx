@@ -18,9 +18,9 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: '21st Club — Build your club',
+  title: '21st Club — A football career mode in your browser',
   description:
-    'Build a club from real Premier League players, predict its season, and play every match.',
+    'A football career mode you play in your browser. Found a club, sign real Premier League players, play the season. Free, no download.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -9,9 +9,11 @@
 
 You found a brand-new football club that enters the Premier League in place of one of the promoted clubs. You get a fixed budget to sign **real Premier League players**. The site instantly predicts how your club would do over a season (points, finishing position, title / top-4 / relegation odds). Then you play the season **match by match**: pick your XI and tactics, watch each match as a short 2D highlight animation, make half-time decisions, and watch your club move up or down the league table.
 
-**One-line pitch:** _FPL is your weekly fantasy team. This is where you find out if you could actually run a club._
+**One-line pitch:** _A football career mode you play in your browser. Found a club, sign real Premier League players, play the season. Free, no download._
 
 ## 2. How it differs from FPL (don't drift into building FPL)
+
+> Internal guidance only. This comparison no longer drives marketing copy; the site is positioned as a game (a career mode), not as analytics or an FPL alternative.
 
 | FPL                                     | 21st Club                                                                        |
 | --------------------------------------- | -------------------------------------------------------------------------------- |
@@ -127,9 +129,9 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 | Deep green           | `#0B3320`                      | Analysis ground and hard shadows                                            |
 | Pitch lines          | `rgba(245, 241, 228, 0.5)`     | Pitch markings                                                              |
 | Volt                 | `#D7F24A`                      | Primary CTA background and headline highlights on green                     |
-| Signal red           | `#CF2F32`                      | `LIVE` and `BREAKING` only; white text on it is 5.1:1                       |
+| Signal red           | `#CF2F32`                      | `LIVE` and `BREAKING` only; white text on it is 5.1:1 (replaces `#E5383B`)  |
 | Transfer desk orange | `#FF6B2C`                      | Transfer-desk segment tag                                                   |
-| The analysis sky     | `#5BB8F0` / `#1A6FA8` on light | Analysis segment tag and accessible sky text on light                       |
+| Season sky           | `#5BB8F0` / `#1A6FA8` on light | "Your season" segment tag and accessible sky text on light                  |
 | Highlights           | `#D7F24A`                      | Highlights segment tag                                                      |
 | Goalkeeper           | `#FFB627`                      | `GK` wherever a position appears                                            |
 | Defender             | `#5BB8F0`                      | `DEF` wherever a position appears                                           |
@@ -140,13 +142,15 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 - Small text on the grass stripes must be cream, never muted green (muted green falls below 4.5:1 on the lighter stripe).
 - Position markers on a pitch always have a 2–3px ink outline.
 - Match viewer: the user's team uses its club primary colour with an ink outline, falling back to ink; opponents use cream with an ink outline. Position colours are not used in the match viewer.
-- Segment tags: Transfer desk is orange, The analysis is sky, and Highlights is volt.
+- Segment tags: Transfer desk is orange, Your season is sky, Highlights is volt, and How it works is a neutral chip.
+- Body text is at least 16px at 390px wide and 18px at 1440px wide. Labels and tags are at least 12px.
+- Visual reference: `docs/design/landing-mockup.html` is a saved snapshot of the landing markup only (no styles, so it will not render as designed). The rendered design reference is the local, gitignored `21st Club — Landing Page.pdf`. Copy and structure in this plan and the task override both.
 - Primary button: volt background, ink text, uppercase Oswald, minimum height 48px (64px for hero and sign-off CTAs). Secondary: ink background with cream text, or a 2px ink border on light.
 - Featured panels use a hard `14px 14px 0` offset shadow in deep green or ink. No blur shadows.
 - Fonts: **Oswald 500/600** for uppercase display headings, big numbers, labels and broadcast bars; **Archivo 400–600** for body copy and tables. Stats and tables use tabular numbers.
 - Display sizes: hero `clamp(46px, 6.2vw, 88px)`; section headings `clamp(38px, 4.6vw, 64px)`; line-height `1`.
 - Mobile-first, works on desktop; two-column layouts stack at phone width. All text must meet WCAG AA contrast (4.5:1, or 3:1 at 24px and above).
-- **Legal:** no Premier League, club or real broadcaster branding or colour schemes; no crests, kits or player photos; never mention FIFA/EA. The footer carries “Not affiliated with the Premier League or any club.”
+- **Legal:** no Premier League, club or real broadcaster branding or colour schemes; no crests, kits or player photos; never name FIFA, EA, EA Sports FC, Football Manager or any other game in copy, metadata, alt text or SEO keywords (generic lowercase genre terms such as "career mode" and "football manager game" are fine). The footer carries “Not affiliated with the Premier League or any club.”
 
 ## 9. Roadmap (build in this order, one phase at a time)
 
@@ -160,7 +164,7 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 - 10,000 seasons in well under a second in Node.
 - Acceptance: surrogate matches engine on held-out matchups; using each real club as the "user" reproduces its `calibrate-season` average closely.
 
-**Phase 2 — Web foundation.** Next.js app with the design tokens above; landing page (hero with prediction card, "how it works", "watch every match", leaderboard teaser, CTA).
+**Phase 2 — Web foundation.** Next.js app with the design tokens above; landing page (hero with season preview card, "how your career works", transfer desk, "your season, predicted", "watch every match", CTA), written in game voice.
 
 **Phase 3 — Found club + squad builder + prediction screen.** Steps from §3 with all rules enforced; shareable prediction card.
 

@@ -23,7 +23,7 @@ A web game where the user founds a club that replaces a promoted club in the Pre
 6. **Don't retune the engine unless the task explicitly asks.** If you touch `packages/engine` behaviour or `tuning.ts`, re-run `pnpm --filter @pl/scripts calibrate` and `calibrate-season` and report the results against the guardrail table in `docs/PRODUCT_PLAN.md` §7.
 7. **Benchmarks are check-only.** Don't tune against a single season's table.
 8. **Follow the design system** in `docs/PRODUCT_PLAN.md` §8 (matchday TV broadcast on the grass, cream breathing-room sections, Oswald / Archivo, square corners, black broadcast bars and hard offset shadows).
-9. **Legal:** no Premier League or club logos, crests, kits or branding; no player photos; never mention FIFA or EA.
+9. **Legal:** no Premier League or club logos, crests, kits or branding; no player photos; never name FIFA, EA, EA Sports FC, Football Manager or any other game in copy, metadata, alt text or SEO keywords (generic lowercase genre terms like "career mode" and "football manager game" are fine).
 10. **Secrets:** never commit `.env` files or keys. The FPL cache stays gitignored; only `scripts/data/benchmarks/` is committed.
 
 ## Workflow

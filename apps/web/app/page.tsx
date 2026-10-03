@@ -18,9 +18,6 @@ const pointsPeak = Math.max(...samplePrediction.pointsDistribution.map((bin) => 
 const modalPointsBin = samplePrediction.pointsDistribution.reduce((best, bin) =>
   bin.probability > best.probability ? bin : best,
 ).min;
-const sampleOpponents = [...samplePrediction.perOpponentExpectedPoints]
-  .sort((a, b) => b.total - a.total)
-  .slice(0, 5);
 
 const money = (units: number): string => `£${(units / 10).toFixed(1)}m`;
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
@@ -30,13 +27,40 @@ const ordinal = (position: number): string => {
   return `${position}${position % 10 === 1 ? 'st' : position % 10 === 2 ? 'nd' : position % 10 === 3 ? 'rd' : 'th'}`;
 };
 
+const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
+const maxPerClubWord = numberWords[MAX_PER_REAL_CLUB] ?? String(MAX_PER_REAL_CLUB);
+
 const headlines = [
-  `${money(SQUAD_BUDGET)} budget confirmed`,
-  `${playerData.length} players on the market`,
-  `Max ${MAX_PER_REAL_CLUB} per real club`,
-  `${samplePrediction.seasons.toLocaleString()} seasons simulated per prediction`,
-  `${SQUAD_SIZE} places to fill before opening day`,
+  'Transfer window open',
+  `${money(SQUAD_BUDGET)} to spend`,
+  `${playerData.length} real players available`,
+  `Max ${maxPerClubWord} from any club`,
+  `${SQUAD_SIZE} squad spots to fill`,
 ];
+
+const careerSteps = [
+  {
+    title: 'Found your club',
+    text: 'Pick a name, colours and a crest.',
+    accent: 'gk',
+  },
+  {
+    title: 'Sign your squad',
+    text: `Real players, real prices, ${money(SQUAD_BUDGET)} to spend.`,
+    accent: 'def',
+  },
+  {
+    title: 'See your season',
+    text: "An instant prediction of where you'll finish.",
+    accent: 'mid',
+  },
+  {
+    title: 'Play every match',
+    text: 'Watch matches and make half-time changes.',
+    accent: 'fwd',
+    soon: true,
+  },
+] as const;
 
 function BrandMark() {
   return (
@@ -54,7 +78,7 @@ function Arrow() {
 function ForecastHistogram({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`forecast-histogram ${compact ? 'compact' : ''}`}>
-      <div className="forecast-bars" aria-label="Points across 10,000 simulated seasons">
+      <div className="forecast-bars" aria-label="How the points of a season could land">
         {samplePrediction.pointsDistribution.map((bin) => (
           <span
             className={bin.min === modalPointsBin ? 'modal' : ''}
@@ -67,7 +91,7 @@ function ForecastHistogram({ compact = false }: { compact?: boolean }) {
       {compact ? (
         <div className="forecast-axis">
           <span>Fewer points</span>
-          <span>Points distribution</span>
+          <span>Possible seasons</span>
           <span>More points</span>
         </div>
       ) : null}
@@ -86,9 +110,7 @@ function StudioScreen() {
         <div className="studio-club-line">
           <div>
             <h2>{sampleClub.name}</h2>
-            <p>
-              {sampleClub.formation} · {samplePrediction.seasons.toLocaleString()} simulated seasons
-            </p>
+            <p>{sampleClub.formation} · Sample squad</p>
           </div>
           <div className="studio-points">
             <strong>{samplePrediction.meanPoints.toFixed(1)}</strong>
@@ -121,7 +143,7 @@ function StudioScreen() {
 
 function NewsTicker() {
   return (
-    <section className="news-ticker" aria-label="Club news headlines">
+    <section className="news-ticker" aria-label="Transfer window headlines">
       <span className="ticker-label">Club news</span>
       <div className="ticker-window">
         <div className="ticker-track">
@@ -141,11 +163,19 @@ function NewsTicker() {
   );
 }
 
-const formationRows = [
-  { position: 'FWD', count: 3, y: 19 },
-  { position: 'MID', count: 3, y: 49 },
-  { position: 'DEF', count: 4, y: 74 },
-  { position: 'GK', count: 1, y: 91 },
+// Percent coordinates for a 4-3-3: the line bows slightly the way a broadcast graphic draws it.
+const formationDots = [
+  { position: 'FWD', x: 19, y: 25 },
+  { position: 'FWD', x: 50, y: 19 },
+  { position: 'FWD', x: 81, y: 25 },
+  { position: 'MID', x: 27, y: 50 },
+  { position: 'MID', x: 51, y: 55 },
+  { position: 'MID', x: 74, y: 50 },
+  { position: 'DEF', x: 15, y: 72 },
+  { position: 'DEF', x: 39, y: 76 },
+  { position: 'DEF', x: 63, y: 76 },
+  { position: 'DEF', x: 86, y: 72 },
+  { position: 'GK', x: 50, y: 91 },
 ] as const;
 
 function TacticalBoard() {
@@ -160,18 +190,13 @@ function TacticalBoard() {
         <span className="pitch-centre-circle" />
         <span className="pitch-penalty top" />
         <span className="pitch-penalty bottom" />
-        {formationRows.flatMap((row) =>
-          Array.from({ length: row.count }, (_, index) => (
-            <span
-              className={`position-dot position-${row.position.toLowerCase()}`}
-              key={`${row.position}-${index}`}
-              style={{
-                left: `${((index + 1) * 100) / (row.count + 1)}%`,
-                top: `${row.y}%`,
-              }}
-            />
-          )),
-        )}
+        {formationDots.map((dot, index) => (
+          <span
+            className={`position-dot position-${dot.position.toLowerCase()}`}
+            key={index}
+            style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+          />
+        ))}
       </div>
       <div className="position-legend">
         {POSITION_ORDER.map((position) => (
@@ -190,10 +215,10 @@ function AnalysisForecast() {
       <div className="analysis-forecast-card">
         <div className="analysis-points-line">
           <div>
-            <span>{sampleClub.name} · Average points</span>
+            <span>{sampleClub.name} · Avg points</span>
             <strong>{samplePrediction.meanPoints.toFixed(1)}</strong>
           </div>
-          <b>Most likely: {ordinal(likelyPosition)}</b>
+          <b>Most likely finish: {ordinal(likelyPosition)}</b>
         </div>
         <div className="analysis-stat-row">
           <div>
@@ -209,38 +234,8 @@ function AnalysisForecast() {
             <strong>{pct(samplePrediction.relegationProbability)}</strong>
           </div>
         </div>
-        <p className="chart-label">
-          Points across {samplePrediction.seasons.toLocaleString()} seasons
-        </p>
+        <p className="chart-label">How your points could land</p>
         <ForecastHistogram />
-      </div>
-      <div className="fixtures-card">
-        <div className="fixtures-title">
-          <h3>Expected points by opponent</h3>
-          <span>Best fixtures</span>
-        </div>
-        <div className="fixtures-scroll">
-          <div
-            className="fixtures-table"
-            role="table"
-            aria-label="Five best expected-points fixtures"
-          >
-            <div className="fixtures-row fixtures-head" role="row">
-              <span>Opponent</span>
-              <span>Home</span>
-              <span>Away</span>
-              <span>Total</span>
-            </div>
-            {sampleOpponents.map((opponent) => (
-              <div className="fixtures-row" role="row" key={opponent.opponentId}>
-                <strong>{opponent.opponentName}</strong>
-                <span>{opponent.home.toFixed(2)}</span>
-                <span>{opponent.away.toFixed(2)}</span>
-                <strong>{opponent.total.toFixed(2)}</strong>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -277,12 +272,13 @@ export default function Home() {
         <header className="landing-nav page-shell">
           <BrandMark />
           <nav aria-label="Main navigation">
+            <a href="#how-it-works">How it works</a>
             <a href="#transfer-desk">Transfer desk</a>
-            <a href="#analysis">The analysis</a>
+            <a href="#analysis">Your season</a>
             <a href="#highlights">Highlights</a>
           </nav>
           <a className="button button-primary button-small" href="/play">
-            Build your club
+            Start your career
           </a>
         </header>
         <div className="hero-content page-shell">
@@ -291,30 +287,31 @@ export default function Home() {
               <span className="live-badge">
                 <i /> Live
               </span>
-              <span>Matchday 1 · Season preview</span>
+              <span>New season · Transfer window open</span>
             </div>
             <h1>
-              A new club.
-              <span>A place in the league.</span>
+              Start a club.
+              <span>Take on the Premier League.</span>
             </h1>
             <p className="hero-lead">
-              FPL is your weekly fantasy team. This is where you find out if you could actually run
-              a club.
+              A football career mode you play in your browser. Found your club, sign real players on
+              a {money(SQUAD_BUDGET)} budget, and see how far they can take you.
             </p>
-            <p className="hero-support">
-              Sign real Premier League players on a {money(SQUAD_BUDGET)} budget and see where
-              you&apos;d finish.
-            </p>
+            <ul className="hero-badges" aria-label="Highlights">
+              <li>Free</li>
+              <li>No download</li>
+              <li>Plays on your phone</li>
+            </ul>
           </div>
           <StudioScreen />
         </div>
         <div className="hero-lower-third page-shell">
           <div>
-            <span>This is your club&apos;s first day</span>
-            <p>Name it, sign {SQUAD_SIZE} players, get your forecast in minutes.</p>
+            <span>Your career starts today</span>
+            <p>Name your club, sign {SQUAD_SIZE} players, and see where you&apos;ll finish.</p>
           </div>
           <a className="button button-primary button-hero" href="/play">
-            Build your club <Arrow />
+            Start your career <Arrow />
           </a>
         </div>
       </section>
@@ -329,28 +326,48 @@ export default function Home() {
 
       <NewsTicker />
 
+      <section className="steps-section" id="how-it-works">
+        <div className="page-shell">
+          <span className="segment-tag steps-tag">How it works</span>
+          <h2>How your career works</h2>
+          <ol className="steps-grid">
+            {careerSteps.map((step, index) => (
+              <li className={`step-card step-${step.accent}`} key={step.title}>
+                <span className="step-number">{String(index + 1).padStart(2, '0')}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+                {'soon' in step ? <span className="step-soon">Coming soon</span> : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       <section className="transfer-section" id="transfer-desk">
         <div className="page-shell">
           <span className="segment-tag transfer-tag">Transfer deadline desk</span>
           <div className="section-heading-row">
-            <h2>There are {SQUAD_SIZE} places to get right.</h2>
+            <h2>
+              {SQUAD_SIZE} spots. {money(SQUAD_BUDGET)}. Choose wisely.
+            </h2>
             <p>
-              A fixed budget and a strict registration list. Every signing has to fit before the
-              window shuts.
+              Pick from {playerData.length} real players. Stay on budget, and take no more than{' '}
+              {maxPerClubWord} from any one club.
             </p>
           </div>
           <div className="transfer-panel">
             <div className="transfer-budget">
-              <span>Transfer budget</span>
+              <span>Your transfer budget</span>
               <div>
                 <strong>{money(SQUAD_BUDGET)}</strong>
-                <p>Spend it on real Premier League players at their current market prices.</p>
+                <p>Spend it on real players at their current prices.</p>
+                <i className="budget-bar" aria-hidden="true" />
               </div>
             </div>
             <div className="registration-panel">
               <div className="registration-heading">
-                <span>Squad registration</span>
-                <span>{SQUAD_SIZE} players</span>
+                <span>Your squad</span>
+                <span>{SQUAD_SIZE} spots</span>
               </div>
               {POSITION_ORDER.map((position) => (
                 <div className="registration-row" key={position}>
@@ -359,7 +376,10 @@ export default function Home() {
                   </span>
                   <div aria-label={`${POSITION_QUOTAS[position]} ${position} places`}>
                     {Array.from({ length: POSITION_QUOTAS[position] }, (_, index) => (
-                      <i className={`slot-${position.toLowerCase()}`} key={index} />
+                      <i
+                        className={index === 0 ? `slot-${position.toLowerCase()}` : undefined}
+                        key={index}
+                      />
                     ))}
                   </div>
                   <strong>{POSITION_QUOTAS[position]}</strong>
@@ -368,8 +388,8 @@ export default function Home() {
               <div className="registration-rule">
                 <b>{String(MAX_PER_REAL_CLUB).padStart(2, '0')}</b>
                 <div>
-                  <strong>Max three per real club</strong>
-                  <span>No club can supply more than three players to your squad.</span>
+                  <strong>Max {maxPerClubWord} per real club</strong>
+                  <span>No club can supply more than {maxPerClubWord} players to your squad.</span>
                 </div>
                 <a className="button transfer-button" href="/play">
                   Enter the market
@@ -382,14 +402,13 @@ export default function Home() {
 
       <section className="landing-analysis" id="analysis">
         <div className="page-shell">
-          <span className="segment-tag analysis-tag">The analysis</span>
+          <span className="segment-tag analysis-tag">Your season</span>
           <h2>
-            Shape matters.
-            <span>Then the numbers.</span>
+            Your season,
+            <span>predicted.</span>
           </h2>
           <p className="analysis-intro">
-            Every squad, yours included, plays full team-versus-team simulations against the other
-            19 clubs. No summed player points.
+            Every match is played out team against team, so balance and shape decide your finish.
           </p>
           <div className="analysis-layout">
             <TacticalBoard />
@@ -415,14 +434,12 @@ export default function Home() {
 
       <section className="landing-signoff grass-stripes">
         <div className="page-shell">
-          <p>The story starts with you</p>
           <h2>
-            One place.
-            <span>Your name on it.</span>
+            Your club. Your career.
+            <span>Your name on the trophy.</span>
           </h2>
-          <p>Build the club that takes the promoted place. See the forecast. Make your move.</p>
           <a className="button button-primary button-hero" href="/play">
-            Build your club <Arrow />
+            Start your career <Arrow />
           </a>
         </div>
       </section>

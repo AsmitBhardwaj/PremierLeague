@@ -88,6 +88,8 @@ export interface MatchEvent {
   /** Team performing the action; null for whole-match events. */
   teamId: string | null;
   playerId: string | null;
+  /** Substitution events only: the player who left the pitch (`playerId` is the player who came on). */
+  offPlayerId?: string;
   action: ActionType;
   outcome: Outcome;
   start: Point;

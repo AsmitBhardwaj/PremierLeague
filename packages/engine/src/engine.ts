@@ -687,6 +687,8 @@ export class Match {
       at,
       at,
       `${on.player.name} replaces ${injury ? 'injured ' : ''}${off.player.name}.`,
+      undefined,
+      off.player.id,
     );
   }
 
@@ -828,6 +830,7 @@ export class Match {
     end: Point,
     commentary: string,
     xg?: number,
+    offPlayerId?: string,
   ): void {
     const rel = this.clock - this.halfStart;
     let minute: number;
@@ -858,6 +861,7 @@ export class Match {
       commentary,
     };
     if (xg !== undefined) event.xg = Math.round(xg * 1000) / 1000;
+    if (offPlayerId !== undefined) event.offPlayerId = offPlayerId;
     this.events.push(event);
   }
 

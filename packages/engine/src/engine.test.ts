@@ -122,3 +122,43 @@ describe('half-time', () => {
     expect(avgStamina('high_press')).toBeLessThan(avgStamina('balanced') - 3);
   });
 });
+
+describe('substitution events', () => {
+  it('records the outgoing player without altering any other output', async () => {
+    const { fingerprint, goldenResults, serialiseWithoutOffPlayer } =
+      await import('./golden-scenarios');
+    const golden = (await import('./fixtures/golden-hashes.json')).default as {
+      score: { home: number; away: number };
+      events: number;
+      hash: string;
+    }[];
+    const results = goldenResults();
+    expect(results).toHaveLength(golden.length);
+    results.forEach((result, index) => {
+      expect(result.score).toEqual(golden[index]!.score);
+      expect(result.events).toHaveLength(golden[index]!.events);
+      expect(fingerprint(serialiseWithoutOffPlayer(result))).toBe(golden[index]!.hash);
+    });
+  });
+
+  it('names the player who left on every substitution event', () => {
+    const home = mk('h', 60);
+    const away = mk('a', 60);
+    let seen = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const match = new Match({ home, away, seed });
+      match.playFirstHalf();
+      const off = home.players.find((p) => p.position === 'FWD')!;
+      const on = home.bench!.find((p) => p.position === 'FWD')!;
+      match.substitute('home', off.id, on.id);
+      const subs = match.playSecondHalf().events.filter((e) => e.action === 'substitution');
+      for (const event of subs) {
+        seen++;
+        expect(event.offPlayerId).toBeTruthy();
+        expect(event.offPlayerId).not.toBe(event.playerId);
+      }
+      expect(subs.find((e) => e.playerId === on.id)?.offPlayerId).toBe(off.id);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+});

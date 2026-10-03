@@ -78,7 +78,7 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
    - title % = share of simulations finishing 1st
    - most likely finish = most frequent position
    - the points histogram on the prediction screen is those totals plotted
-4. **Speed.** Predictions use a **fast surrogate model** fitted to the event engine (team ratings → expected goals → Poisson/Dixon-Coles scorelines). The 342 matches between the 19 real clubs are **precomputed** once; per prediction only the user's 38 matches are simulated. Watched matches use the **full event engine**. Because the surrogate is fitted to the engine, they agree.
+4. **Speed.** Predictions use a **fast surrogate model** fitted to the event engine (team ratings → `expectedGoals` → independent Poisson goal counts for each side, with home advantage via the `isHome` term; there is no Dixon-Coles correction). The 342 matches between the 19 real clubs are **precomputed** once; per prediction only the user's 38 matches are simulated. Watched matches use the **full event engine**. Because the surrogate is fitted to the engine, they agree.
 
 ## 6. Architecture
 
@@ -105,7 +105,7 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 - Half-time API: `new Match(input)` → `playFirstHalf()` → `substitute()` / `setTactic()` → `playSecondHalf()`; `simulateMatch(input, halfTimeCallback?)` wraps it.
 - Output: event timeline (minute, team, player, action, start/end x-y, outcome, commentary), score, player ratings (1–10), team stats.
 
-**Calibration guardrails (regression targets).** Any engine change must re-run both calibration scripts and stay near these:
+**Calibration guardrails (regression targets).** The table below is the `calibrate-season` output (200 seasons of real-club squads). Any engine change must re-run both calibration scripts and stay near these:
 
 | Metric                                       | Target                           | Current                   |
 | -------------------------------------------- | -------------------------------- | ------------------------- |
@@ -118,6 +118,8 @@ Event-based engine in `packages/engine/src` (`engine.ts`, `types.ts`, `rng.ts`, 
 | Highest relegation rate                      | under ~90%                       | 87.5%                     |
 | Spearman vs Opta 2026/27 pre-season forecast | check only                       | 0.839                     |
 | Spearman vs real 2025/26 table               | check only                       | 0.489                     |
+
+_Reference only, not a guardrail:_ `calibrate` (1,000 matches between synthetic teams) currently reports 2.70 goals per game and 25.6% draws. It measures a different population from `calibrate-season`, so it is not comparable to the table above and is not a regression.
 
 **Hard rules:**
 

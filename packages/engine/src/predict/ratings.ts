@@ -49,3 +49,50 @@ export function aggregateTeamRatings(team: Team): TeamAggregateRatings {
     benchDepth: mean((team.bench ?? []).map((player) => overall(player.position, player.ratings))),
   };
 }
+
+/**
+ * What the season surrogate sees of a side: the starting XI's mean rating for each outfield skill,
+ * the goalkeeper's rating and the forwards' finishing. Plain means, so a squad is described the
+ * same way however it was assembled (stars and scrubs included), with no composite weights to
+ * mislead when a side sits outside the real clubs' range.
+ */
+export interface TeamProfile {
+  passing: number;
+  dribbling: number;
+  shooting: number;
+  tackling: number;
+  positioning: number;
+  pace: number;
+  keeper: number;
+  forwardShooting: number;
+  /** Formation shape on the rating scale: 65 at four defenders, 5 points per defender more or fewer. */
+  defenders: number;
+  /** Likewise 65 at two forwards. */
+  forwards: number;
+}
+
+export function teamProfile(team: Team): TeamProfile {
+  const players = outfield(team);
+  const skill = (key: 'passing' | 'dribbling' | 'shooting' | 'tackling' | 'positioning' | 'pace') =>
+    mean(players.map(({ ratings }) => ratings[key]));
+  const forwards = players.filter((player) => player.position === 'FWD');
+  const shooting = skill('shooting');
+  return {
+    passing: skill('passing'),
+    dribbling: skill('dribbling'),
+    shooting,
+    tackling: skill('tackling'),
+    positioning: skill('positioning'),
+    pace: skill('pace'),
+    keeper: mean(
+      team.players
+        .filter((player) => player.position === 'GK')
+        .map((player) => player.ratings.goalkeeping),
+    ),
+    forwardShooting: forwards.length
+      ? mean(forwards.map(({ ratings }) => ratings.shooting))
+      : shooting,
+    defenders: 65 + 5 * (players.filter((player) => player.position === 'DEF').length - 4),
+    forwards: 65 + 5 * (forwards.length - 2),
+  };
+}

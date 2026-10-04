@@ -6,6 +6,7 @@ interface PredictionRequest {
   team: Team;
   seed: number;
   replacedClubId: string;
+  opponents: Team[];
 }
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -16,6 +17,7 @@ self.onmessage = ({ data }: MessageEvent<PredictionRequest>) => {
       seasons: 10_000,
       seed: data.seed,
       replacedClubId: data.replacedClubId,
+      opponents: data.opponents,
     });
     self.postMessage({ prediction });
   } catch (error) {

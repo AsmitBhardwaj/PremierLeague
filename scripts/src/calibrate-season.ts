@@ -1,14 +1,18 @@
 // Simulates full 38-game double round-robin seasons between the 20 real clubs (built from the
 // FPL cache) and prints the average final table plus the spread vs a typical recent season.
-//   pnpm --filter @pl/scripts calibrate-season [seasons]
-import { buildClubs, simulateMatch } from '@pl/engine';
+//   pnpm --filter @pl/scripts calibrate-season [seasons] [--static]
+// By default every season runs with the Phase 5 dynamics on (fitness, form, injuries,
+// suspensions, rotation) across all 38 matchdays. `--static` plays the old fixed-strength seasons.
+import { Season, buildClubs, simulateMatch } from '@pl/engine';
 import { DistributionStats } from './lib/distribution';
 import { loadFplCache } from './lib/fpl-cache';
+import { buildSeasonClubs } from './lib/season-clubs';
 import { fplNameOf, loadLastSeasonTable } from './lib/last-season-table';
 import { forecastFplName, loadPreseasonForecast } from './lib/preseason-forecast';
 import { buildTeamBenchmark, spearman } from './lib/team-benchmark';
 
-const SEASONS = Number(process.argv[2] ?? 200);
+const STATIC = process.argv.includes('--static');
+const SEASONS = Number(process.argv.find((a) => /^\d+$/.test(a)) ?? 200);
 const { bootstrap, summaries } = loadFplCache();
 const clubs = buildClubs(bootstrap, summaries);
 // buildClubs keeps bootstrap.teams order, so benchmark[i] is the same club as clubs[i].
@@ -44,36 +48,61 @@ let draws = 0;
 let matches = 0;
 const started = Date.now();
 
+const seasonClubs = buildSeasonClubs(bootstrap, summaries);
+const indexOf = new Map(clubs.map((c, i) => [c.team.id, i]));
+const record = (
+  h: number,
+  a: number,
+  r: ReturnType<typeof simulateMatch>,
+  pts: number[],
+  gf: number[],
+  ga: number[],
+): void => {
+  dist.add(r, clubs[h]!.team.id);
+  matches++;
+  acc[h]!.xgf += r.stats.home.xg;
+  acc[h]!.xga += r.stats.away.xg;
+  acc[a]!.xgf += r.stats.away.xg;
+  acc[a]!.xga += r.stats.home.xg;
+  gf[h]! += r.score.home;
+  ga[h]! += r.score.away;
+  gf[a]! += r.score.away;
+  ga[a]! += r.score.home;
+  if (r.score.home > r.score.away) {
+    pts[h]! += 3;
+    homeWins++;
+  } else if (r.score.home < r.score.away) pts[a]! += 3;
+  else {
+    pts[h]!++;
+    pts[a]!++;
+    draws++;
+  }
+};
+
 for (let s = 0; s < SEASONS; s++) {
   const pts = new Array<number>(n).fill(0);
   const gf = new Array<number>(n).fill(0);
   const ga = new Array<number>(n).fill(0);
-  let m = 0;
-  for (let h = 0; h < n; h++) {
-    for (let a = 0; a < n; a++) {
-      if (h === a) continue;
-      const home = clubs[h]!;
-      const away = clubs[a]!;
-      const r = simulateMatch({ home: home.team, away: away.team, seed: s * 1000 + m++ + 1 });
-      dist.add(r, home.team.id);
-      matches++;
-      acc[h]!.xgf += r.stats.home.xg;
-      acc[h]!.xga += r.stats.away.xg;
-      acc[a]!.xgf += r.stats.away.xg;
-      acc[a]!.xga += r.stats.home.xg;
-      gf[h]! += r.score.home;
-      ga[h]! += r.score.away;
-      gf[a]! += r.score.away;
-      ga[a]! += r.score.home;
-      if (r.score.home > r.score.away) {
-        pts[h]! += 3;
-        homeWins++;
-      } else if (r.score.home < r.score.away) pts[a]! += 3;
-      else {
-        pts[h]!++;
-        pts[a]!++;
-        draws++;
+  if (STATIC) {
+    let m = 0;
+    for (let h = 0; h < n; h++) {
+      for (let a = 0; a < n; a++) {
+        if (h === a) continue;
+        const r = simulateMatch({
+          home: clubs[h]!.team,
+          away: clubs[a]!.team,
+          seed: s * 1000 + m++ + 1,
+        });
+        record(h, a, r, pts, gf, ga);
       }
+    }
+  } else {
+    const season = new Season({ seed: s + 1, clubs: seasonClubs });
+    while (!season.finished) {
+      season.playMatchday({
+        onMatch: (fixture, r) =>
+          record(indexOf.get(fixture.home)!, indexOf.get(fixture.away)!, r, pts, gf, ga),
+      });
     }
   }
   const order = [...pts.keys()].sort(

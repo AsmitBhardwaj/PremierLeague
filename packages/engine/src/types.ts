@@ -40,6 +40,11 @@ export interface MatchInput {
   away: Team;
   /** Integer seed for the single random stream used by the whole match. */
   seed: number;
+  /**
+   * Optional starting stamina (0-100) by player id; players not listed start at 100. Season play
+   * uses it to carry fitness between matches. Absent, the match is identical to earlier versions.
+   */
+  startStamina?: Readonly<Record<string, number>>;
 }
 
 export interface Point {
@@ -105,6 +110,11 @@ export interface PlayerMatchRating {
   name: string;
   /** 1.0-10.0 */
   rating: number;
+  /**
+   * The same 1.0-10.0 scale, but from the player's own actions only: no team-result or
+   * clean-sheet terms. Season form is built from this.
+   */
+  individual: number;
   minutesPlayed: number;
   goals: number;
   assists: number;

@@ -9,6 +9,7 @@ const rating = (name: string, value: number, goals = 0): PlayerMatchRating => ({
   teamId: 't',
   name,
   rating: value,
+  individual: value,
   minutesPlayed: 90,
   goals,
   assists: 0,

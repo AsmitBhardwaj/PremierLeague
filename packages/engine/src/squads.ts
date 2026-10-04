@@ -10,7 +10,7 @@ import type { Player, PlayerRatings, Position, Tactic, Team } from './types';
 export const BENCH_SIZE = 7;
 
 /** [defenders, midfielders, forwards] options the picker chooses between. */
-const FORMATIONS: readonly (readonly [number, number, number])[] = [
+export const FORMATIONS: readonly (readonly [number, number, number])[] = [
   [4, 4, 2],
   [4, 3, 3],
   [3, 5, 2],

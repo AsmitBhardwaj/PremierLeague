@@ -1,7 +1,7 @@
 import type { Player, Position, Team } from '@pl/engine';
 
-/** Budget in tenths of £m (our own valuations): £250.0m. */
-export const SQUAD_BUDGET = 2500;
+/** Budget in tenths of £m (our own valuations): £275.0m. */
+export const SQUAD_BUDGET = 2750;
 
 /** Tenths of £m as a display string: whole millions stay whole, e.g. £175m, £12.5m, £0.9m. */
 export const formatMoney = (units: number): string =>

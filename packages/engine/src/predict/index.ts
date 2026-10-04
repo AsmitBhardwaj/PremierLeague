@@ -1,7 +1,7 @@
 import backgroundData from './data/season-background.json';
 import { createRng } from '../rng';
 import type { Team } from '../types';
-import { aggregateTeamRatings, type TeamAggregateRatings } from './ratings';
+import { teamProfile, type TeamProfile } from './ratings';
 import { simulateSurrogateMatch } from './surrogate';
 import type {
   HistogramBin,
@@ -14,7 +14,7 @@ import type {
 interface BackgroundClub {
   id: string;
   name: string;
-  ratings: TeamAggregateRatings;
+  profile: TeamProfile;
 }
 
 interface ReplacementBackground {
@@ -97,7 +97,8 @@ export function predictSeason(
   }
   if (!Number.isInteger(seed)) throw new Error('seed must be an integer');
 
-  const user = aggregateTeamRatings(userSquad);
+  const user = teamProfile(userSquad);
+  const opponentProfiles = new Map((options.opponents ?? []).map((t) => [t.id, teamProfile(t)]));
   const clubCount = background.clubs.length;
   let storedPoints = decodedPoints.get(replacedClubId);
   if (!storedPoints) {
@@ -122,14 +123,15 @@ export function predictSeason(
 
     for (let club = 0; club < clubCount; club++) {
       const opponent = background.clubs[club]!;
-      const atHome = simulateSurrogateMatch(user, opponent.ratings, rng);
+      const opponentProfile = opponentProfiles.get(opponent.id) ?? opponent.profile;
+      const atHome = simulateSurrogateMatch(user, opponentProfile, rng);
       userPoints +=
         atHome.homeGoals > atHome.awayGoals ? 3 : atHome.homeGoals === atHome.awayGoals ? 1 : 0;
       addResult(points, club, atHome.awayGoals, atHome.homeGoals);
       opponentPoints[club]!.home +=
         atHome.homeGoals > atHome.awayGoals ? 3 : atHome.homeGoals === atHome.awayGoals ? 1 : 0;
 
-      const away = simulateSurrogateMatch(opponent.ratings, user, rng);
+      const away = simulateSurrogateMatch(opponentProfile, user, rng);
       const awayPoints =
         away.awayGoals > away.homeGoals ? 3 : away.awayGoals === away.homeGoals ? 1 : 0;
       userPoints += awayPoints;
@@ -180,8 +182,8 @@ export function predictSeason(
   };
 }
 
-export { aggregateTeamRatings } from './ratings';
-export type { TeamAggregateRatings } from './ratings';
+export { aggregateTeamRatings, teamProfile } from './ratings';
+export type { TeamAggregateRatings, TeamProfile } from './ratings';
 export {
   expectedGoals,
   samplePoisson,

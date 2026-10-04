@@ -24,7 +24,7 @@ import {
   type Formation,
   type MarketPlayer,
 } from './lib/squad';
-import { computeReplacedClub } from './lib/clubs';
+import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import {
   STORAGE_KEY,
@@ -928,6 +928,7 @@ export function PlayFlow() {
       team: createPredictionTeam('user-club', identity.name, selected, starterIds, formation),
       seed: PREDICTION_SEED,
       replacedClubId: REPLACED_CLUB.id,
+      opponents: buildOpponentTeams(market, REPLACED_CLUB.id, selected),
     });
     return () => worker.terminate();
   }, [formation, identity.name, predictionRun, selected, starterIds, step]);

@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  aggregateTeamRatings,
+  teamProfile,
   buildClubs,
   createSyntheticTeam,
   simulateMatch,
@@ -12,9 +12,20 @@ import {
   type SurrogateParameters,
   type Team,
 } from '@pl/engine';
+import { readFileSync } from 'node:fs';
+import { createRng } from '@pl/engine';
 import { loadFplCache } from './lib/fpl-cache';
+import { balancedBuild } from '../../apps/web/app/play/lib/budget-helpers';
+import { noisyGreedySquads, randomLegalSquads } from './lib/random-squads';
+import {
+  createPredictionTeam,
+  pickFormationXI,
+  type MarketPlayer,
+} from '../../apps/web/app/play/lib/squad';
 
 const REPEATS = Number(process.argv[2] ?? 30);
+const RANDOM_SQUADS = Number(process.argv[3] ?? 120);
+const GREEDY_SQUADS = Number(process.argv[4] ?? 60);
 const OUT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -26,32 +37,30 @@ const OUT = join(
   'data',
   'surrogate-parameters.json',
 );
+const PROFILE_NAMES = [
+  'Passing',
+  'Dribbling',
+  'Shooting',
+  'Tackling',
+  'Positioning',
+  'Pace',
+  'Keeper',
+  'ForwardShooting',
+  'Defenders',
+  'Forwards',
+];
+const ratingNames = [
+  ...PROFILE_NAMES.map((name) => `own${name}`),
+  ...PROFILE_NAMES.map((name) => `opponent${name}`),
+];
 const FEATURE_NAMES = [
   'intercept',
   'isHome',
-  'ownAttack',
-  'ownMidfield',
-  'ownDefence',
-  'ownKeeper',
-  'ownBenchDepth',
-  'opponentAttack',
-  'opponentMidfield',
-  'opponentDefence',
-  'opponentKeeper',
-  'opponentBenchDepth',
-  'ownAttackSquared',
-  'ownMidfieldSquared',
-  'ownDefenceSquared',
-  'ownKeeperSquared',
-  'ownBenchDepthSquared',
-  'opponentAttackSquared',
-  'opponentMidfieldSquared',
-  'opponentDefenceSquared',
-  'opponentKeeperSquared',
-  'opponentBenchDepthSquared',
+  ...ratingNames,
+  ...ratingNames.map((n) => `${n}Squared`),
 ];
 const template: SurrogateParameters = {
-  version: 1,
+  version: 3,
   ratingCenter: 65,
   ratingScale: 10,
   featureNames: FEATURE_NAMES,
@@ -154,12 +163,64 @@ for (const club of real) {
   }
 }
 
+// User-style squads (stars and scrubs, from the real market at many budgets) against every real
+// club, home and away. They sit outside the real clubs' range, so the surrogate has to learn there too.
+const market = JSON.parse(
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..',
+      'apps',
+      'web',
+      'app',
+      'play',
+      'data',
+      'players.json',
+    ),
+    'utf8',
+  ),
+) as MarketPlayer[];
+const prefixed = (team: Team, prefix: string): Team => ({
+  ...team,
+  players: team.players.map((p) => ({ ...p, id: `${prefix}${p.id}` })),
+  bench: team.bench?.map((p) => ({ ...p, id: `${prefix}${p.id}` })),
+});
+// Random legal squads, plus rating-led "sensible" ones (balanced builds at a spread of budgets and
+// noisy greedy builds). The £275m balanced build is left out so the prediction-honesty check on it
+// stays a held-out test.
+const sensibleBudgets = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600];
+const userSquads = [
+  ...randomLegalSquads(market, RANDOM_SQUADS, 424_242),
+  ...sensibleBudgets.map((budget) => balancedBuild(budget)),
+  ...noisyGreedySquads(market, GREEDY_SQUADS, 90_210),
+];
+const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '4-5-1', '3-4-3'] as const;
+const formationRng = createRng(5150);
+userSquads.forEach((squad, index) => {
+  // Users choose their formation, so the training squads are played in every supported one.
+  const formation = FORMATIONS[Math.floor(formationRng() * FORMATIONS.length)]!;
+  const user = prefixed(
+    createPredictionTeam(
+      `U${index}`,
+      `User ${index}`,
+      squad,
+      pickFormationXI(squad, formation),
+      formation,
+    ),
+    `u${index}:`,
+  );
+  for (const club of real) {
+    matchups.push({ home: user, away: club, weight: 2 }, { home: club, away: user, weight: 2 });
+  }
+});
+
 const observations: Observation[] = [];
 let matchSeed = 10_000;
 for (let matchup = 0; matchup < matchups.length; matchup++) {
   const { home, away, weight } = matchups[matchup]!;
-  const homeRatings = aggregateTeamRatings(home);
-  const awayRatings = aggregateTeamRatings(away);
+  const homeRatings = teamProfile(home);
+  const awayRatings = teamProfile(away);
   for (let repeat = 0; repeat < REPEATS; repeat++) {
     const result = simulateMatch({ home, away, seed: matchSeed++ });
     observations.push(

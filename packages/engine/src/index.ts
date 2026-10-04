@@ -7,3 +7,4 @@ export * from './ratings';
 export { buildClubs, pickSquad, overall, BENCH_SIZE, type Club } from './squads';
 export * from './predict';
 export * from './market-value';
+export * from './season';

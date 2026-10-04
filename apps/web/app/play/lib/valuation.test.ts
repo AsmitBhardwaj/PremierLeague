@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balancedBuild, likelyFinish, market, optimise, predict } from './budget-helpers';
+import { averageFinish, balancedBuild, market, optimise, predict } from './budget-helpers';
 import { SQUAD_BUDGET, cheapestLegalCompletion, squadCost, type MarketPlayer } from './squad';
 
 const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'] as const;
@@ -97,22 +97,24 @@ describe('the budget balances the game', () => {
     expect(twoFit).toBe(true);
   }, 240000);
 
-  it('puts a balanced build 8th-12th', () => {
+  // Targets are judged on average finish. The exact check is the played-out one
+  // (`honesty-predict-season`); these use the prediction, which runs about half a place
+  // pessimistic and is sampled, so they allow half a place either side of each target.
+  it('puts a balanced build 9th-12th on average', () => {
     const squad = balancedBuild(SQUAD_BUDGET);
     expect(squadCost(squad)).toBeLessThanOrEqual(SQUAD_BUDGET);
-    // Evaluated in the 4-3-3: the balanced build's finish moves with the formation it is played in.
-    const finish = likelyFinish(predict(squad, 2000, '4-3-3'));
-    expect(finish).toBeGreaterThanOrEqual(8);
-    expect(finish).toBeLessThanOrEqual(12);
+    const finish = averageFinish(predict(squad, 2000));
+    expect(finish).toBeGreaterThanOrEqual(8.5);
+    expect(finish).toBeLessThanOrEqual(12.5);
   }, 120000);
 
-  it('keeps the optimised build a long way from the title and spends the budget', () => {
+  it('puts the optimised build 4th-6th on average, in title contention, spending the budget', () => {
     const squad = optimise(SQUAD_BUDGET, 200, 500);
     expect(squadCost(squad)).toBeGreaterThanOrEqual(0.95 * SQUAD_BUDGET);
     const prediction = predict(squad, 2000);
-    expect(prediction.titleProbability).toBeLessThan(0.15);
-    // The target is 4th-7th; this lighter optimiser may land a place higher than the full sweep.
-    expect(likelyFinish(prediction)).toBeGreaterThanOrEqual(3);
-    expect(likelyFinish(prediction)).toBeLessThanOrEqual(7);
+    expect(prediction.titleProbability).toBeGreaterThanOrEqual(0.02);
+    expect(prediction.titleProbability).toBeLessThan(0.1);
+    expect(averageFinish(prediction)).toBeGreaterThanOrEqual(3.5);
+    expect(averageFinish(prediction)).toBeLessThanOrEqual(6.5);
   }, 240_000);
 });

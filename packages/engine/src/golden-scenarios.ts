@@ -14,10 +14,18 @@ export function fingerprint(value: string): string {
   return hash.toString(16).padStart(8, '0');
 }
 
-/** A result serialised without the (additive) `offPlayerId` field on substitution events. */
+/**
+ * A result serialised without the additive fields: `offPlayerId` on substitution events and
+ * `individual` on player ratings.
+ */
 export function serialiseWithoutOffPlayer(result: MatchResult): string {
   return JSON.stringify({
     ...result,
+    playerRatings: result.playerRatings.map((rating) => {
+      const rest: Partial<typeof rating> = { ...rating };
+      delete rest.individual;
+      return rest;
+    }),
     events: result.events.map((event) => {
       const rest: Partial<typeof event> = { ...event };
       delete rest.offPlayerId;

@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { predictSeason } from '@pl/engine';
+import { buildOpponentTeams } from '../../apps/web/app/play/lib/clubs';
 import {
   createPredictionTeam,
   pickFormationXI,
@@ -21,19 +22,19 @@ const squadPlayerIds = [
   'fpl-572',
   'fpl-269',
   'fpl-17',
-  'fpl-440',
+  'fpl-553',
   'fpl-300',
   'fpl-204',
   'fpl-244',
-  'fpl-316',
-  'fpl-178',
+  'fpl-138',
+  'fpl-577',
   'fpl-339',
   'fpl-224',
   'fpl-254',
   'fpl-100',
   'fpl-608',
   'fpl-364',
-  'fpl-659',
+  'fpl-239',
   'fpl-145',
   'fpl-127',
 ] as const;
@@ -53,13 +54,22 @@ if (errors.length) throw new Error(`Landing sample is invalid: ${[...new Set(err
 
 const prediction = predictSeason(
   createPredictionTeam(club.id, club.name, squad, starterIds, formation),
-  { seasons: 10_000, seed, replacedClubId },
+  {
+    seasons: 10_000,
+    seed,
+    replacedClubId,
+    opponents: buildOpponentTeams(market, replacedClubId, squad),
+  },
 );
 const likelyFinish = prediction.positionDistribution.reduce((best, item) =>
   item.probability > best.probability ? item : best,
 ).position;
-if (likelyFinish < 8 || likelyFinish > 12) {
-  throw new Error(`Landing sample must finish 8th–12th; generated ${likelyFinish}.`);
+const averageFinish = prediction.positionDistribution.reduce(
+  (sum, item) => sum + item.position * item.probability,
+  0,
+);
+if (averageFinish < 9 || averageFinish > 12) {
+  throw new Error(`Landing sample must average 9th–12th; generated ${averageFinish.toFixed(1)}.`);
 }
 
 const output = {
@@ -80,5 +90,5 @@ const output = {
 mkdirSync(dirname(destination), { recursive: true });
 writeFileSync(destination, `${JSON.stringify(output, null, 2)}\n`);
 console.log(
-  `Wrote ${club.name}: ${likelyFinish}th most likely, ${prediction.meanPoints.toFixed(1)} mean points to ${destination}`,
+  `Wrote ${club.name}: ${likelyFinish}th most likely (${averageFinish.toFixed(1)} on average), ${prediction.meanPoints.toFixed(1)} mean points to ${destination}`,
 );

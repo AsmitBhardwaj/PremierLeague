@@ -1,6 +1,6 @@
 import parameters from './data/surrogate-parameters.json';
 import { createRng, type Rng } from '../rng';
-import type { TeamAggregateRatings } from './ratings';
+import type { TeamProfile } from './ratings';
 
 export interface SurrogateParameters {
   version: number;
@@ -18,34 +18,37 @@ export interface SurrogateMatch {
   awayExpectedGoals: number;
 }
 
+/** Order of a profile's entries in the feature vector (own side first, then the opponent). */
+export const PROFILE_KEYS = [
+  'passing',
+  'dribbling',
+  'shooting',
+  'tackling',
+  'positioning',
+  'pace',
+  'keeper',
+  'forwardShooting',
+  'defenders',
+  'forwards',
+] as const satisfies readonly (keyof TeamProfile)[];
+
 export const SURROGATE_PARAMETERS = parameters as SurrogateParameters;
 
 /** Feature order is persisted alongside the coefficients to keep regeneration auditable. */
 export function surrogateFeatures(
-  own: TeamAggregateRatings,
-  opponent: TeamAggregateRatings,
+  own: TeamProfile,
+  opponent: TeamProfile,
   isHome: boolean,
   params: SurrogateParameters = SURROGATE_PARAMETERS,
 ): number[] {
   const scaled = (value: number): number => (value - params.ratingCenter) / params.ratingScale;
-  const ratings = [
-    scaled(own.attack),
-    scaled(own.midfield),
-    scaled(own.defence),
-    scaled(own.keeper),
-    scaled(own.benchDepth),
-    scaled(opponent.attack),
-    scaled(opponent.midfield),
-    scaled(opponent.defence),
-    scaled(opponent.keeper),
-    scaled(opponent.benchDepth),
-  ];
+  const ratings = [own, opponent].flatMap((team) => PROFILE_KEYS.map((key) => scaled(team[key])));
   return [1, isHome ? 1 : 0, ...ratings, ...ratings.map((rating) => rating * rating)];
 }
 
 export function expectedGoals(
-  own: TeamAggregateRatings,
-  opponent: TeamAggregateRatings,
+  own: TeamProfile,
+  opponent: TeamProfile,
   isHome: boolean,
   params: SurrogateParameters = SURROGATE_PARAMETERS,
 ): number {
@@ -70,8 +73,8 @@ export function samplePoisson(lambda: number, rng: Rng): number {
 }
 
 export function simulateSurrogateMatch(
-  home: TeamAggregateRatings,
-  away: TeamAggregateRatings,
+  home: TeamProfile,
+  away: TeamProfile,
   seedOrRng: number | Rng,
 ): SurrogateMatch {
   const rng = typeof seedOrRng === 'number' ? createRng(seedOrRng) : seedOrRng;

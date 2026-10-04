@@ -7,7 +7,7 @@ import { squadCost } from './squad';
 // players being elite in the simulation (which made every budget produce the same squad).
 describe('money buys strength', () => {
   it('raises the best predicted points with the budget and spends at least 95% of it', () => {
-    const results = [1500, 2000, 2500].map((budget) => {
+    const results = [1500, 2000, 2750].map((budget) => {
       const squad = optimise(budget);
       return { budget, spent: squadCost(squad), points: predict(squad, 200).meanPoints };
     });

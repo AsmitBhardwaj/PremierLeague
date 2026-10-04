@@ -1,4 +1,4 @@
-import { aggregateTeamRatings, expectedGoals, type Team } from '@pl/engine';
+import { expectedGoals, teamProfile, type Team } from '@pl/engine';
 import type { Venue } from './seed';
 
 export interface FixtureOdds {
@@ -27,8 +27,8 @@ function poissonMass(lambda: number): number[] {
  * advantage). Nothing here sums player stats beyond the surrogate's own team aggregates.
  */
 export function fixtureOdds(user: Team, opponent: Team, venue: Venue): FixtureOdds {
-  const own = aggregateTeamRatings(user);
-  const other = aggregateTeamRatings(opponent);
+  const own = teamProfile(user);
+  const other = teamProfile(opponent);
   const userExpectedGoals = expectedGoals(own, other, venue === 'home');
   const opponentExpectedGoals = expectedGoals(other, own, venue === 'away');
   const userMass = poissonMass(userExpectedGoals);

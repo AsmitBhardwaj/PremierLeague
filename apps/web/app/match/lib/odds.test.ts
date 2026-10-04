@@ -1,4 +1,4 @@
-import { createRng, predictSeason, simulateSurrogateMatch, aggregateTeamRatings } from '@pl/engine';
+import { createRng, predictSeason, simulateSurrogateMatch, teamProfile } from '@pl/engine';
 import { describe, expect, it } from 'vitest';
 import { buildRealClubTeam, computeReplacedClub, listOpponents } from '../../play/lib/clubs';
 import { fixtureOdds } from './odds';
@@ -20,10 +20,10 @@ describe('fixtureOdds', () => {
 
   it('matches the surrogate sampler predictSeason uses (300k draws per fixture, within 0.01)', () => {
     const rng = createRng(2026);
-    const own = aggregateTeamRatings(user);
+    const own = teamProfile(user);
     for (const club of opponents) {
       const opponent = buildRealClubTeam(market, club.id);
-      const other = aggregateTeamRatings(opponent);
+      const other = teamProfile(opponent);
       for (const venue of ['home', 'away'] as const) {
         let points = 0;
         const draws = 300_000;

@@ -114,8 +114,8 @@ export class Match {
 
     this.rng = createRng(input.seed);
     this.sides = {
-      home: this.buildSide('home', input.home),
-      away: this.buildSide('away', input.away),
+      home: this.buildSide('home', input.home, input.startStamina),
+      away: this.buildSide('away', input.away, input.startStamina),
     };
   }
 
@@ -232,12 +232,12 @@ export class Match {
 
   private clockPeriod: 1 | 2 = 1;
 
-  private buildSide(side: Side, team: Team): SideState {
+  private buildSide(side: Side, team: Team, startStamina: MatchInput['startStamina']): SideState {
     const mk = (player: Player, starter: boolean): PlayerState => ({
       player,
       teamId: team.id,
       side,
-      stamina: 100,
+      stamina: clamp(startStamina?.[player.id] ?? 100, T.minStamina, 100),
       yellow: 0,
       sentOff: false,
       injured: false,
@@ -981,6 +981,7 @@ export class Match {
           teamId: p.teamId,
           name: p.player.name,
           rating: Math.round(clamp(r, 1, 10) * 10) / 10,
+          individual: Math.round(clamp(6 + p.delta, 1, 10) * 10) / 10,
           minutesPlayed: minutes,
           goals: p.goals,
           assists: p.assists,

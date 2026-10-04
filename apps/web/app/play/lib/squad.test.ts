@@ -38,13 +38,13 @@ describe('complete roster validation', () => {
 });
 
 describe('selection constraints', () => {
-  it('enforces the £250m budget', () => {
+  it('enforces the £275m budget', () => {
     const squad = cheapestSquad().map((player, index) =>
       index === 0 ? { ...player, value: SQUAD_BUDGET } : player,
     );
-    expect(validateSquad(squad)).toContain('The squad is over the £250m budget.');
+    expect(validateSquad(squad)).toContain('The squad is over the £275m budget.');
     expect(assessSelection({ ...market[0]!, value: SQUAD_BUDGET + 1 }, [], market).message).toMatch(
-      /over £250m/,
+      /over £275m/,
     );
   });
 

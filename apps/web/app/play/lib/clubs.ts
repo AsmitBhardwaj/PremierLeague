@@ -1,4 +1,4 @@
-import { aggregateTeamRatings, pickSquad, type Player, type Team } from '@pl/engine';
+import { aggregateTeamRatings, fieldTeam, pickSquad, type Player, type Team } from '@pl/engine';
 import type { MarketPlayer } from './squad';
 
 /** The three clubs promoted into the 2026/27 league; the user's club replaces one of them. */
@@ -22,8 +22,14 @@ export function listClubs(market: readonly MarketPlayer[]): RealClub[] {
 }
 
 /** A real club's squad, picked by the engine's global picker (the same rules for every club). */
-export function buildRealClubTeam(market: readonly MarketPlayer[], clubId: string): Team {
-  const eligible = market.filter((player) => player.clubShortName === clubId);
+export function buildRealClubTeam(
+  market: readonly MarketPlayer[],
+  clubId: string,
+  excluding: ReadonlySet<string> = new Set(),
+): Team {
+  const eligible = market.filter(
+    (player) => player.clubShortName === clubId && !excluding.has(player.id),
+  );
   if (!eligible.length) throw new Error(`No eligible players found for club ${clubId}.`);
   const players: Player[] = eligible.map((player) => ({
     id: player.id,
@@ -31,7 +37,25 @@ export function buildRealClubTeam(market: readonly MarketPlayer[], clubId: strin
     position: player.position,
     ratings: player.ratings,
   }));
-  return pickSquad(clubId, eligible[0]!.clubName, players);
+  // Without exclusions this is exactly `pickSquad`; a club left short of a whole position (its only
+  // forward signed by the user) still fields a side, as it would in a played season.
+  return excluding.size
+    ? fieldTeam(clubId, eligible[0]!.clubName, players, 'balanced')
+    : pickSquad(clubId, eligible[0]!.clubName, players);
+}
+
+/**
+ * The 19 real clubs as they would line up against this squad: never with a player the user has
+ * signed (the season's no-facing-himself rule). Passed to `predictSeason` so the prediction matches
+ * the season that is then played.
+ */
+export function buildOpponentTeams(
+  market: readonly MarketPlayer[],
+  replacedId: string,
+  userSquad: readonly { id: string }[],
+): Team[] {
+  const owned = new Set(userSquad.map((player) => player.id));
+  return listOpponents(market, replacedId).map((club) => buildRealClubTeam(market, club.id, owned));
 }
 
 /**

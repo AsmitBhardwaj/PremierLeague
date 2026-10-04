@@ -1,4 +1,5 @@
-import { predictSeason, type SeasonPrediction } from '@pl/engine';
+import { pickSquad, predictSeason, type SeasonPrediction } from '@pl/engine';
+import { buildOpponentTeams, computeReplacedClub } from './clubs';
 import playerData from '../data/players.json';
 import {
   MAX_PER_REAL_CLUB,
@@ -15,6 +16,7 @@ import {
 // Test support: squad builders used to check that the budget balances the game. Deterministic.
 export const market = playerData as MarketPlayer[];
 export const FORMATION: Formation = '4-4-2';
+const REPLACED_CLUB_ID = computeReplacedClub(market).id;
 
 /** Legal under every squad rule except the budget, which is the argument. */
 export const isLegal = (squad: readonly MarketPlayer[], budget: number): boolean => {
@@ -36,12 +38,25 @@ export const isLegal = (squad: readonly MarketPlayer[], budget: number): boolean
 export const predict = (
   squad: readonly MarketPlayer[],
   seasons: number,
-  formation: Formation = FORMATION,
+  formation?: Formation,
 ): SeasonPrediction =>
   predictSeason(
-    createPredictionTeam('user', 'User FC', squad, pickFormationXI(squad, formation), formation),
-    { seasons, seed: 7 },
+    // No formation: the engine's own picker chooses the XI, as it does for every club in a played
+    // season (and in the prediction-honesty check).
+    formation
+      ? createPredictionTeam('user', 'User FC', squad, pickFormationXI(squad, formation), formation)
+      : pickSquad('user', 'User FC', squad),
+    {
+      seasons,
+      seed: 7,
+      replacedClubId: REPLACED_CLUB_ID,
+      opponents: buildOpponentTeams(market, REPLACED_CLUB_ID, squad),
+    },
   );
+
+/** Average finishing position: steadier than the most likely finish on a flat distribution. */
+export const averageFinish = (prediction: SeasonPrediction): number =>
+  prediction.positionDistribution.reduce((sum, row) => sum + row.position * row.probability, 0);
 
 export const likelyFinish = (prediction: SeasonPrediction): number =>
   prediction.positionDistribution.reduce((best, row) =>
@@ -98,6 +113,31 @@ export function optimise(budget: number, seasons = 200, iterations = 500): Marke
       squad = candidate;
       points = candidatePoints;
     }
+  }
+  // The prediction ignores the bench, so the climb may have sold bench players for nothing. Spend
+  // what is left on the best rating gained per unit spent, as a person using the whole budget would.
+  for (;;) {
+    let best: { index: number; player: MarketPlayer; score: number } | null = null;
+    for (let index = 0; index < squad.length; index++) {
+      const current = squad[index]!;
+      for (const player of market) {
+        if (player.position !== current.position || player.overall <= current.overall) continue;
+        if (player.status === 'u' || squad.includes(player)) continue;
+        if (
+          !isLegal(
+            squad.map((p, i) => (i === index ? player : p)),
+            budget,
+          )
+        ) {
+          continue;
+        }
+        const score =
+          (player.overall - current.overall) / Math.max(1, player.value - current.value);
+        if (!best || score > best.score) best = { index, player, score };
+      }
+    }
+    if (!best) break;
+    squad = squad.map((p, i) => (i === best!.index ? best!.player : p));
   }
   return squad;
 }

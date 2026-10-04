@@ -15,6 +15,7 @@
     "generate-landing-sample": "tsx src/generate-landing-sample.ts",
     "generate-landing-match": "tsx src/generate-landing-match.ts",
     "sanity-predict-season": "tsx src/sanity-predict-season.ts",
+    "honesty-predict-season": "tsx src/honesty-predict-season.ts",
     "benchmark-predict-season": "tsx src/benchmark-predict-season.ts",
     "fpl-sync": "tsx src/fpl-sync.ts",
     "team-benchmark": "tsx src/team-benchmark.ts"

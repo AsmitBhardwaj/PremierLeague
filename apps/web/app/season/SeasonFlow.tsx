@@ -23,6 +23,7 @@ import { ordinal, userPosition } from './lib/format';
 import type { MatchFinish, MatchStart, SeasonView } from './lib/protocol';
 import { SEASON_STORAGE_KEY, USER_CLUB_ID } from './lib/setup';
 import '../match/match.css';
+import '../match/theme.css';
 import './season.css';
 
 const market = playerData as MarketPlayer[];
@@ -438,10 +439,24 @@ export function SeasonFlow() {
 
   const viewerMode = mode === 'instant' ? 'highlights' : mode;
   const position = userPosition(view.table);
+  const theme =
+    stage === 'first_half' || stage === 'second_half'
+      ? 'theme-stadium'
+      : stage === 'pick' || stage === 'half_time' || stage === 'full_time'
+        ? 'theme-grass'
+        : 'theme-cream';
+  const band =
+    stage === 'hub'
+      ? { eyebrow: `Matchday ${Math.min(view.round + 1, 38)} of 38`, title: 'Season hub' }
+      : stage === 'window'
+        ? { eyebrow: 'Halfway point · matchday 20 played', title: 'January window' }
+        : stage === 'finished'
+          ? { eyebrow: 'Full time on the season', title: 'Season complete' }
+          : null;
 
   return (
     <main
-      className="mt-shell"
+      className={`mt-shell ${theme}`}
       style={{ '--club-primary': view.identity.primaryColor } as CSSProperties}
     >
       <header className="mt-header">
@@ -462,6 +477,19 @@ export function SeasonFlow() {
           </span>
         </div>
       </header>
+
+      {band ? (
+        <div className="mt-band grass-stripes">
+          <div>
+            <p>{band.eyebrow}</p>
+            <h1>{band.title}</h1>
+          </div>
+          <div className="mt-band-club">
+            <strong>{view.identity.name}</strong>
+            <p>{ordinal(position)} in the league</p>
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="se-error page-shell" role="alert">
@@ -560,9 +588,10 @@ export function SeasonFlow() {
           firstHalf={active.start.events}
           sides={sides}
           tactic={view.lineup.tactic}
-          onContinue={(tactic, substitutions) =>
+          matchdayLabel={`Matchday ${active.start.round + 1}`}
+          onContinue={(tactic, substitutions, skip) =>
             void sendFinish({ tactic, substitutions }).then((finished) => {
-              if (finished) setStage('second_half');
+              if (finished) setStage(skip ? 'full_time' : 'second_half');
             })
           }
         />

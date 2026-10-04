@@ -131,6 +131,7 @@
 }
 
 .se-odds {
+  margin-top: 14px;
   display: grid;
   gap: 10px;
 }

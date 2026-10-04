@@ -225,7 +225,16 @@ export class Match {
       players,
       substitutionsUsed: { home: this.sides.home.subsUsed, away: this.sides.away.subsUsed },
       tactics: { home: this.sides.home.tactic, away: this.sides.away.tactic },
+      ratings: this.buildRatings(),
+      possession: this.possessionShares(),
     };
+  }
+
+  /** Percentage of playing time with the ball so far; read-only, never touches the random stream. */
+  private possessionShares(): Record<Side, number> {
+    const total = this.sides.home.possessionSeconds + this.sides.away.possessionSeconds || 1;
+    const share = (s: SideState): number => Math.round((s.possessionSeconds / total) * 1000) / 10;
+    return { home: share(this.sides.home), away: share(this.sides.away) };
   }
 
   // ------------------------------------------------------------------ set-up
@@ -947,9 +956,9 @@ export class Match {
   // ---------------------------------------------------------------- result
 
   private result(): MatchResult {
-    const total = this.sides.home.possessionSeconds + this.sides.away.possessionSeconds || 1;
+    const possession = this.possessionShares();
     const statsFor = (s: SideState): TeamStats => ({
-      possession: Math.round((s.possessionSeconds / total) * 1000) / 10,
+      possession: possession[s.side],
       ...s.stats,
       xg: Math.round(s.stats.xg * 100) / 100,
     });

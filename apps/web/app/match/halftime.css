@@ -1,0 +1,595 @@
+/* Half-time: stats, key moments, your XI on a vertical pitch, the assistant's tip and the plan. */
+.ht {
+  padding-block: 24px calc(48px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 22px;
+}
+
+.hs-card {
+  min-width: 0;
+  padding: 20px 22px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--ink);
+}
+
+.hs-title {
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hs-title span {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+/* Stats strip: "us – them" with a thin share bar in the club colour. */
+.hs-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 14px 22px;
+}
+
+.hs-stat dt {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hs-stat dd {
+  margin: 2px 0 6px;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.hs-stat i {
+  height: 6px;
+  display: block;
+  background: var(--hairline);
+  border: 1px solid var(--ink);
+}
+
+.hs-stat i b {
+  height: 100%;
+  display: block;
+}
+
+/* Key moments */
+.hs-moments ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hs-moments li {
+  padding: 7px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  border-top: 1px solid var(--hairline);
+  font-size: 17px;
+}
+
+.km-min {
+  min-width: 52px;
+  padding: 1px 8px;
+  display: inline-block;
+  background: var(--chip);
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 14px;
+  text-align: center;
+}
+
+.km-tag {
+  min-width: 70px;
+  padding: 2px 8px;
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.tag-goal,
+.tag-red {
+  background: var(--signal-red);
+  color: #fff;
+}
+
+.tag-yellow {
+  background: var(--gk);
+  color: var(--ink);
+}
+
+.tag-injury {
+  background: var(--warning-bg);
+  border: 2px solid var(--warning);
+  color: var(--warning);
+}
+
+.tag-sub {
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.hs-empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* XI, tip and plan */
+.ht-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-areas:
+    'left tip'
+    'left plan';
+  grid-template-rows: auto 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.ht-left {
+  grid-area: left;
+}
+
+.ht-tip {
+  grid-area: tip;
+}
+
+.ht-plan {
+  grid-area: plan;
+}
+
+.ht-left-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ht-subs-left {
+  margin: 0 0 12px;
+  padding: 2px 10px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ht-subs-left strong {
+  color: var(--volt);
+  font-size: 18px;
+}
+
+.ht-pitch {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  aspect-ratio: 0.8;
+  position: relative;
+  border: 3px solid var(--ink);
+  background-color: var(--grass-dark);
+  background-size: 100% 120px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--grass-dark) 0,
+    var(--grass-dark) 60px,
+    var(--grass-light) 60px,
+    var(--grass-light) 120px
+  );
+}
+
+/* Vertical pitch markings: outline, halfway line, centre circle and both penalty areas. */
+.ht-pitch-lines {
+  position: absolute;
+  inset: 8px;
+  border: 2px solid rgb(245 241 228 / 80%);
+  pointer-events: none;
+}
+
+.ht-pitch-lines::before {
+  content: '';
+  height: 2px;
+  position: absolute;
+  inset: 50% 0 auto;
+  background: rgb(245 241 228 / 80%);
+}
+
+.ht-pitch-lines::after {
+  content: '';
+  width: 24%;
+  aspect-ratio: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 2px solid rgb(245 241 228 / 80%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Player cards: position strip, position, live rating chip, name, fitness bar. */
+.hp {
+  --strip: var(--ink);
+  width: clamp(62px, 16%, 92px);
+  min-height: 56px;
+  padding: 4px 5px 5px 11px;
+  display: grid;
+  gap: 2px;
+  position: relative;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: inset 6px 0 0 var(--strip);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ht-pitch .hp {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.hp-gk {
+  --strip: var(--gk);
+}
+
+.hp-def {
+  --strip: var(--def);
+}
+
+.hp-mid {
+  --strip: var(--mid);
+}
+
+.hp-fwd {
+  --strip: var(--fwd);
+}
+
+.hp:disabled {
+  cursor: default;
+}
+
+.hp.selected {
+  border-color: var(--volt);
+  outline: 3px solid var(--ink);
+  background: var(--volt);
+  z-index: 3;
+}
+
+.hp.dimmed {
+  opacity: 0.45;
+}
+
+.hp.compatible {
+  background: var(--volt);
+  opacity: 1;
+}
+
+.hp:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.hp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.hp-pos {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.hp-rating {
+  padding: 0 4px;
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tone-high {
+  background: var(--volt);
+}
+
+.tone-low {
+  background: #f2c9c3;
+}
+
+.tone-mid,
+.tone-none {
+  background: var(--chip);
+}
+
+.hp-name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hp-fit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hp-fit i {
+  height: 6px;
+  min-width: 0;
+  flex: 1;
+  display: block;
+  background: var(--hairline);
+  border: 1px solid var(--ink);
+}
+
+.hp-fit i b {
+  height: 100%;
+  display: block;
+}
+
+.hp-fit small {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fit-good {
+  background: var(--grass-dark);
+}
+
+.fit-warn {
+  background: var(--gk);
+}
+
+.fit-bad {
+  background: var(--signal-red);
+}
+
+.hp-flag {
+  padding: 0 4px;
+  position: absolute;
+  top: -9px;
+  right: -6px;
+  background: var(--warning-bg);
+  border: 2px solid var(--warning);
+  color: var(--warning);
+  font-family: var(--display);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.hp-flag.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--volt);
+}
+
+.hp.injured {
+  border-style: dashed;
+}
+
+.ht-bench-title {
+  margin: 18px 0 10px;
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ht-bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 10px;
+}
+
+.ht-bench .hp {
+  width: auto;
+}
+
+.ht-message {
+  min-height: 3em;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.ht-pending {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ht-pending li {
+  margin-top: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--volt);
+  border: 2px solid var(--ink);
+}
+
+.ht-pending i {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.ht-pending button {
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--ink);
+  border: 0;
+  color: var(--cream);
+  font-family: var(--display);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Assistant's tip: an ink panel. */
+.ht-tip {
+  padding: 20px 22px;
+  background: var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--cream);
+}
+
+.ht-tip-kicker {
+  margin: 0 0 8px;
+  color: var(--volt);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ht-tip-text {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+/* Second-half approach */
+.ht-seg {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 2px solid var(--ink);
+}
+
+.ht-seg button {
+  min-height: 48px;
+  padding: 0 4px;
+  background: var(--chip);
+  border: 0;
+  border-right: 2px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ht-seg button:last-child {
+  border-right: 0;
+}
+
+.ht-seg button.selected {
+  background: var(--volt);
+}
+
+.ht-seg button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -5px;
+}
+
+.ht-tradeoff {
+  min-height: 4.2em;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+.ht-actions {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.ht-start {
+  width: 100%;
+  min-height: 64px;
+  font-size: 22px;
+}
+
+.ht-skip {
+  min-height: 48px;
+  padding: 0 20px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .ht-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'tip'
+      'left'
+      'plan';
+  }
+}
+
+@media (max-width: 560px) {
+  .hs-card {
+    padding: 14px;
+    box-shadow: 6px 6px 0 var(--deep-green);
+  }
+
+  .ht-tip {
+    padding: 16px;
+    box-shadow: 6px 6px 0 var(--deep-green);
+  }
+
+  .hs-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ht-pitch {
+    aspect-ratio: 0.72;
+  }
+
+  .ht-seg button {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  /* Five across leaves less than a card of room each, so alternate cards sit above and below. */
+  .ht-pitch .hp[data-crowded='1'] {
+    margin-top: 30px;
+  }
+
+  .ht-pitch .hp[data-crowded='0'] {
+    margin-top: -30px;
+  }
+}

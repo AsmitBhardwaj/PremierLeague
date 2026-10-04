@@ -162,3 +162,38 @@ describe('substitution events', () => {
     expect(seen).toBeGreaterThan(0);
   });
 });
+
+describe('half-time snapshot ratings and possession', () => {
+  it('reports live ratings and possession without changing the match', () => {
+    for (const seed of [3, 11, 29]) {
+      const plain = simulateMatch(input(seed));
+      const match = new Match(input(seed));
+      match.playFirstHalf();
+      const snap = match.snapshot();
+      expect(snap.possession.home + snap.possession.away).toBeGreaterThan(99.8);
+      expect(snap.possession.home + snap.possession.away).toBeLessThan(100.2);
+      expect(snap.ratings.length).toBeGreaterThanOrEqual(22);
+      for (const r of snap.ratings) {
+        expect(r.rating).toBeGreaterThanOrEqual(1);
+        expect(r.rating).toBeLessThanOrEqual(10);
+        expect(r.minutesPlayed).toBeLessThanOrEqual(55);
+      }
+      const goals = snap.ratings.reduce((sum, r) => sum + r.goals, 0);
+      expect(goals).toBe(snap.score.home + snap.score.away);
+      // Reading the snapshot is free: the second half and the result are identical.
+      expect(match.playSecondHalf()).toEqual(plain);
+    }
+  });
+
+  it('matches the final ratings and possession once the match is over', () => {
+    const match = new Match(input(8));
+    match.playFirstHalf();
+    const result = match.playSecondHalf();
+    const snap = match.snapshot();
+    expect(snap.ratings).toEqual(result.playerRatings);
+    expect(snap.possession).toEqual({
+      home: result.stats.home.possession,
+      away: result.stats.away.possession,
+    });
+  });
+});

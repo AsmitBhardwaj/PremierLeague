@@ -21,6 +21,7 @@ import { MATCH_STORAGE_KEY, parseSavedMatchFlow, type SavedMatchFlow } from './l
 import { matchSeed } from './lib/seed';
 import type { PlaybackMode } from './lib/timeline';
 import './match.css';
+import './theme.css';
 
 const market = playerData as MarketPlayer[];
 const replacedClub = computeReplacedClub(market);
@@ -221,11 +222,15 @@ export function MatchFlow() {
     setStage('full_time');
   }, [preparation, update]);
 
-  const continueSecondHalf = (tactic: Tactic, substitutions: PendingSubstitution[]) => {
+  const continueSecondHalf = (
+    tactic: Tactic,
+    substitutions: PendingSubstitution[],
+    skip: boolean,
+  ) => {
     const current = sessionRef.current;
     if (!current) return;
     update({ ...current, result: current.session.continueSecondHalf(tactic, substitutions) });
-    setStage('second_half');
+    setStage(skip ? 'full_time' : 'second_half');
   };
 
   const changeMode = (next: PlaybackMode) => {
@@ -239,10 +244,11 @@ export function MatchFlow() {
   if (!valid || !preparation) return <InvalidState />;
 
   const viewerMode = mode === 'instant' ? 'highlights' : mode;
+  const theme = stage === 'first_half' || stage === 'second_half' ? 'theme-stadium' : 'theme-grass';
 
   return (
     <main
-      className="mt-shell"
+      className={`mt-shell ${theme}`}
       style={{ '--club-primary': preparation.identity.primaryColor } as CSSProperties}
     >
       <MatchHeader identity={preparation.identity} stage={stage} />
@@ -282,6 +288,7 @@ export function MatchFlow() {
           firstHalf={active.firstHalf}
           sides={sides}
           tactic={preparation.tactic}
+          matchdayLabel="Friendly"
           onContinue={continueSecondHalf}
         />
       ) : null}

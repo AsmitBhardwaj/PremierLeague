@@ -113,10 +113,9 @@ export function SeasonFinale({
 
   return (
     <section className="se-window se-finale page-shell" aria-labelledby="se-end-title">
-      <p className="mt-kicker">Full time on the season</p>
-      <h1 id="se-end-title">
+      <h2 id="se-end-title">
         Finished {ordinal(position)} with {row.points} points
-      </h1>
+      </h2>
       <p className="se-finale-places">{summary}</p>
       <p>
         {won} won, {drawn} drawn, {lost} lost · {row.goalsFor} scored, {row.goalsAgainst} conceded.

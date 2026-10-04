@@ -1,0 +1,228 @@
+/* Matchday theme (section 8): the grass for pick-your-team, half-time and full-time, the darker
+   stadium green around the live pitch, and cream (with a grass header band) for management screens. */
+
+.mt-shell.theme-grass,
+.mt-shell.theme-stadium {
+  position: relative;
+  isolation: isolate;
+}
+
+.mt-shell.theme-grass {
+  background-color: var(--grass-dark);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--grass-dark) 0,
+    var(--grass-dark) 96px,
+    var(--grass-light) 96px,
+    var(--grass-light) 192px
+  );
+}
+
+/* Faint pitch markings behind the content: outer line, halfway line, centre circle, boxes. */
+.mt-shell.theme-grass::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 105 68%22 fill=%22none%22 stroke=%22rgb(245 241 228)%22 stroke-opacity=%220.2%22 stroke-width=%220.45%22%3E%3Crect x=%221.5%22 y=%221.5%22 width=%22102%22 height=%2265%22/%3E%3Cline x1=%2252.5%22 y1=%221.5%22 x2=%2252.5%22 y2=%2266.5%22/%3E%3Ccircle cx=%2252.5%22 cy=%2234.0%22 r=%229.15%22/%3E%3Ccircle cx=%2252.5%22 cy=%2234.0%22 r=%220.6%22 fill=%22rgb(245 241 228)%22 fill-opacity=%220.2%22/%3E%3Crect x=%221.5%22 y=%2213.84%22 width=%2216.5%22 height=%2240.32%22/%3E%3Crect x=%221.5%22 y=%2224.84%22 width=%225.5%22 height=%2218.32%22/%3E%3Crect x=%2287.0%22 y=%2213.84%22 width=%2216.5%22 height=%2240.32%22/%3E%3Crect x=%2298.0%22 y=%2224.84%22 width=%225.5%22 height=%2218.32%22/%3E%3C/svg%3E')
+    center / cover no-repeat;
+}
+
+.mt-shell.theme-stadium {
+  background-color: var(--stadium);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--stadium) 0,
+    var(--stadium) 96px,
+    var(--stadium-stripe) 96px,
+    var(--stadium-stripe) 192px
+  );
+}
+
+.mt-shell.theme-cream {
+  background: var(--cream);
+}
+
+/* Text sitting directly on the grass or the stadium is cream; cards bring their own colours. */
+.theme-grass .mt-message,
+.theme-grass .mt-tactics legend,
+.theme-grass .mt-note,
+.theme-grass .se-back,
+.theme-grass .se-link,
+.theme-stadium .mv-you,
+.theme-stadium .mt-seed,
+.theme-stadium .se-back {
+  color: var(--cream);
+}
+
+.theme-grass .se-link {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .mt-shell.theme-grass::before {
+    background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 68 105%22 fill=%22none%22 stroke=%22rgb(245 241 228)%22 stroke-opacity=%220.2%22 stroke-width=%220.45%22%3E%3Crect x=%221.5%22 y=%221.5%22 width=%2265%22 height=%22102%22/%3E%3Cline x1=%221.5%22 y1=%2252.5%22 x2=%2266.5%22 y2=%2252.5%22/%3E%3Ccircle cx=%2234.0%22 cy=%2252.5%22 r=%229.15%22/%3E%3Ccircle cx=%2234.0%22 cy=%2252.5%22 r=%220.6%22 fill=%22rgb(245 241 228)%22 fill-opacity=%220.2%22/%3E%3Crect x=%2213.84%22 y=%221.5%22 width=%2240.32%22 height=%2216.5%22/%3E%3Crect x=%2224.84%22 y=%221.5%22 width=%2218.32%22 height=%225.5%22/%3E%3Crect x=%2213.84%22 y=%2287.0%22 width=%2240.32%22 height=%2216.5%22/%3E%3Crect x=%2224.84%22 y=%2298.0%22 width=%2218.32%22 height=%225.5%22/%3E%3C/svg%3E');
+  }
+}
+
+/* The grass header band on management screens: title, club and matchday. */
+.mt-band {
+  margin: 24px var(--shell-right) 0 var(--shell-left);
+  padding: 22px 26px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+  border: 3px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--deep-green);
+  color: var(--cream);
+}
+
+.mt-band p {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mt-band h1 {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-size: clamp(34px, 4.6vw, 56px);
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mt-band-club {
+  text-align: right;
+}
+
+.mt-band-club strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+@media (max-width: 560px) {
+  .mt-band {
+    padding: 18px 16px 20px;
+    box-shadow: 6px 6px 0 var(--deep-green);
+  }
+
+  .mt-band-club {
+    text-align: left;
+  }
+}
+
+/* Live viewer on the stadium green: the pitch keeps its stripes inside a 3px ink frame; the score
+   bug, commentary and controls are ink panels. */
+.theme-stadium .mv-stage {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.theme-stadium .mv-pitch {
+  border: 3px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+}
+
+.theme-stadium .mv-bug {
+  box-shadow: 8px 8px 0 var(--ink);
+  border: 2px solid rgb(245 241 228 / 22%);
+}
+
+.theme-stadium .mv-feed {
+  background: var(--ink);
+  border: 2px solid rgb(245 241 228 / 22%);
+  box-shadow: 8px 8px 0 var(--ink);
+  color: var(--cream);
+}
+
+.theme-stadium .mv-feed li {
+  border-top-color: rgb(245 241 228 / 18%);
+}
+
+.theme-stadium .mv-feed li b {
+  color: var(--on-green-muted);
+}
+
+.theme-stadium .mv-feed li.feed-goal {
+  background: rgb(245 241 228 / 12%);
+  color: var(--cream);
+}
+
+.theme-stadium .mv-feed li.feed-goal b {
+  color: var(--cream);
+}
+
+.theme-stadium .mv-feed li.feed-injury,
+.theme-stadium .mv-feed li.feed-yellow {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.theme-stadium .mv-feed li.feed-injury b,
+.theme-stadium .mv-feed li.feed-yellow b {
+  color: var(--warning);
+}
+
+.theme-stadium .mv-feed li.feed-red {
+  background: var(--signal-red);
+  color: #fff;
+}
+
+.theme-stadium .mv-feed li.feed-red b {
+  color: #fff;
+}
+
+.theme-stadium .mv-controls {
+  padding: 12px;
+  background: var(--ink);
+  border: 2px solid rgb(245 241 228 / 22%);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.theme-stadium .mv-modes button,
+.theme-stadium .mv-pause {
+  background: transparent;
+  border-color: var(--cream);
+  color: var(--cream);
+}
+
+.theme-stadium .mv-modes button.selected {
+  background: var(--volt);
+  border-color: var(--volt);
+  color: var(--ink);
+}
+
+.theme-stadium .mv-pause:disabled {
+  opacity: 0.5;
+}
+
+.theme-stadium .mv-you i {
+  border-color: var(--cream);
+}
+
+/* Pick your team on the grass: panels stay paper-white with deep-green offset shadows. */
+.theme-grass .mt-bench,
+.theme-grass .mt-player-panel,
+.theme-grass .mt-fixture {
+  box-shadow: 8px 8px 0 var(--deep-green);
+}
+
+.theme-grass .mt-pitch {
+  border-color: var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+}
+
+.theme-grass .mt-tactics label.selected {
+  box-shadow: 8px 8px 0 var(--ink);
+}

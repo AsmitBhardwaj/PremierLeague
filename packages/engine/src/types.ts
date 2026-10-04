@@ -163,6 +163,10 @@ export interface MatchSnapshot {
   players: PlayerSnapshot[];
   substitutionsUsed: Record<Side, number>;
   tactics: Record<Side, Tactic>;
+  /** Match ratings as they stand now (same formula as the final ratings; minutes so far). */
+  ratings: PlayerMatchRating[];
+  /** Share of playing time with the ball so far, in percent (the two sides add to 100). */
+  possession: Record<Side, number>;
 }
 
 export interface SideChanges {

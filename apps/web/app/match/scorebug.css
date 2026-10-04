@@ -1,0 +1,149 @@
+/* Half-time and full-time scoreboard: an ink broadcast bar on the grass. */
+.sb {
+  padding: 16px 22px 20px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 18px;
+  align-items: center;
+  background: var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--cream);
+}
+
+.sb-tag {
+  margin: 0;
+  padding: 4px 12px;
+  background: var(--volt);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sb-sub {
+  margin: 0;
+  color: var(--on-green);
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sb-main {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.sb-club {
+  min-width: 0;
+}
+
+.sb-away {
+  text-align: right;
+}
+
+.sb-name {
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: clamp(20px, 2.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.sb-away .sb-name {
+  justify-content: flex-end;
+}
+
+.sb-name i {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background: var(--cream);
+  border: 2px solid var(--cream);
+  border-radius: 50%;
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
+}
+
+.sb-club.user .sb-name i {
+  border-color: var(--cream);
+}
+
+.sb-long {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-short {
+  display: none;
+}
+
+.sb-score {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+}
+
+.sb-score b {
+  min-width: 52px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(34px, 4.4vw, 52px);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.sb-note {
+  margin-top: 8px;
+  color: var(--on-green);
+  font-size: 15px;
+}
+
+.sb-note ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-note li + li {
+  margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+  .sb {
+    padding: 14px 14px 16px;
+  }
+
+  .sb-long {
+    display: none;
+  }
+
+  .sb-short {
+    display: inline;
+  }
+
+  .sb-main {
+    gap: 10px;
+  }
+
+  .sb-score b {
+    min-width: 40px;
+    padding: 0 6px;
+  }
+}

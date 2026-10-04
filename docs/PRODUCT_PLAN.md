@@ -93,6 +93,7 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 - **End of season:** final table, final position vs the pre-season prediction, top scorer and player of the season (from engine ratings, league-wide), and a shareable season card. Then "Start a new season". Multi-season careers (ageing, contracts, value changes) are not in Phase 5.
 - **Prediction honesty:** at least 200 full seasons for each of a sample of squads (landing sample, balanced, optimised, cheap), managed automatically (`pickSquad` XI, balanced tactic, including the no-facing-himself rule), compared with `predictSeason`. If the mean differs by more than about 2 points, the prediction is updated so pre-season prediction and played-out seasons agree. Both calibration scripts are re-run with season dynamics on across all 38 matchdays and must stay within the §7 guardrails, as must the money-buys-strength check at £250m (balanced 8th–12th, optimised 4th–7th with title under 15%). Same-seed determinism must hold across a whole season.
 - **Engine changes:** two additive, optional inputs/outputs: `MatchInput.startStamina` and `PlayerMatchRating.individual`. The golden fingerprint test proves RNG order and outcomes are unchanged when they are absent. The season module lives in `packages/engine/src/season/` and stays pure.
+- **Half-time data (UI batch after Phase 5):** `MatchSnapshot` gained two additive, read-only fields, `ratings` (the same formula as the final ratings, with minutes and score so far) and `possession` (percent per side so far), so half-time can show live ratings and possession. They never touch the random stream; the golden fingerprint test, `calibrate` and `calibrate-season` are unchanged.
 - **Landing page:** after the loop works, "How your career works" step 04 and the Highlights copy mention playing a full season with a live league table (separate small commit).
 
 ### Approved season-preview decisions (UI batch after Phase 5)
@@ -202,6 +203,12 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 | Forward              | `#FF6B2C`                      | `FWD` wherever a position appears                                           |
 | Warning              | `#8A5A12` on `#F6E7C8`         | Injuries and rule violations                                                |
 
+- **Matchday theme** (the screens where the match is the point):
+  - Pick-your-team, the live match viewer, half-time and full-time sit on the grass: the mowed stripes (`#1C6E3D` / `#217A44`, 96px bands) with faint pitch markings behind the content (outer line, halfway line, centre circle, penalty boxes; a fixed backdrop, lines at about 20% cream).
+  - The live match viewer's page uses a darker "stadium" green (`#0B3320`, with subtle low-contrast stripes in `#0D3A25`). The playable pitch keeps the normal stripes inside a 3px ink frame with clear lines (80% cream) so it stands out. The score bug, commentary and controls are ink panels.
+  - Cards on the grass are paper-white (or ink) with `#0B3320` offset shadows. Any deep-green panel becomes ink. Text sitting directly on the grass is cream (at least 4.5:1 on the lighter stripe).
+  - Management screens (season hub, market, league table, January window, season preview) stay on cream with a grass header band that carries the title, the club and the matchday.
+  - Half-time and full-time status colours: rating chip volt from 7.0, pink `#F2C9C3` below 6.0, neutral in between; fitness bar green from 75%, amber 50-74%, red below 50%; key-moment tags GOAL and RED in signal red `#CF2F32` with white text (a deliberate exception to "LIVE and BREAKING only", because they are broadcast tags), YELLOW amber `#FFB627`, INJURY in the warning colours, SUB ink.
 - Small text on the grass stripes must be cream, never muted green (muted green falls below 4.5:1 on the lighter stripe).
 - Position markers on a pitch always have a 2–3px ink outline.
 - Match viewer: the user's team uses its club primary colour with an ink outline, falling back to ink; opponents use cream with an ink outline. Position colours are not used in the match viewer.
@@ -247,6 +254,8 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 **Phase 6 — Accounts and competition.** Supabase auth, saved clubs, leaderboards (seed-verified on the server), friends leagues, weekly challenges.
 
 - The season seed currently comes from `Date.now()` on the client when a season is created. For leaderboards the server must issue the seed (a client-chosen seed lets people shop for a favourable season), and verification replays the decision log against that seed.
+
+**Post-playtest gameplay pass (not started).** Team talks and morale: they have no effect in the engine today, so the half-time screen has none. Scheduled with the Detailed positions gameplay work above.
 
 **Later (not now):** live season mode (real weekend performances feed player form; results still from team-vs-team simulation), club cohesion rating, transfer market depth.
 

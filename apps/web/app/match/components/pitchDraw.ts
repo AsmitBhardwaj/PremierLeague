@@ -16,7 +16,7 @@ export interface PitchScene {
   userColour: string;
 }
 
-const LINE = 'rgba(245, 241, 228, 0.5)';
+const LINE = 'rgba(245, 241, 228, 0.8)';
 
 /** Draws the 105x68 pitch markings, players and ball. Stripes are CSS (60px bands) underneath. */
 export function drawPitch(

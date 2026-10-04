@@ -75,9 +75,7 @@ export function TransferWindow({
   };
 
   return (
-    <section className="se-window page-shell" aria-labelledby="se-window-title">
-      <p className="mt-kicker">Halfway point · matchday 20 played</p>
-      <h1 id="se-window-title">January window</h1>
+    <section className="se-window page-shell" aria-label="January window">
       <p>
         Swap up to {maxTransfers} players, like for like, at today&apos;s market values. Players out
         injured or suspended cost the same. Other clubs stand still.

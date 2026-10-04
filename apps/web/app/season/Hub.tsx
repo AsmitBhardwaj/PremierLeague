@@ -56,10 +56,10 @@ export function Hub({
           </p>
           {next ? (
             <>
-              <h1 id="se-fixture-title">
+              <h2 id="se-fixture-title">
                 {view.identity.shortName || 'You'} <span>{next.venue === 'home' ? 'v' : 'at'}</span>{' '}
                 {names.get(next.opponentId) ?? next.opponentId}
-              </h1>
+              </h2>
               <p className="mt-muted">{next.venue === 'home' ? 'Home' : 'Away'}</p>
               {next.odds ? (
                 <div className="mt-odds" aria-label="Win, draw, loss odds">

@@ -114,7 +114,17 @@ export interface SeasonAwards {
   /** The same two awards among the user's own players, for the matches they played for the club. */
   userTopScorer: AwardLine | null;
   userBestPlayer: AwardLine | null;
+  /** The ranked top three behind each award (the winner is the first), for showing the race. */
+  races: {
+    topScorer: AwardLine[];
+    playerOfSeason: AwardLine[];
+    userTopScorer: AwardLine[];
+    userBestPlayer: AwardLine[];
+  };
 }
+
+/** How many players each award's race lists. */
+export const AWARD_RACE_SIZE = 3;
 
 /** Fewest appearances to win player of the season (a hot streak in a few games is not a season). */
 export const MIN_AWARD_APPEARANCES = 15;
@@ -347,15 +357,29 @@ export class Career {
     const eligible = all.filter((p) => p.appearances >= MIN_AWARD_APPEARANCES);
     const mineOnly = stats.filter((s) => s.clubId === this.userClubId).map(line);
     const mineEligible = mineOnly.filter((p) => p.appearances >= MIN_USER_APPEARANCES);
-    const pick = (list: AwardLine[], order: (a: AwardLine, b: AwardLine) => number) =>
-      [...list].sort(order)[0] ?? null;
-    const scorer = pick(all, byGoals);
-    const userScorer = pick(mineOnly, byGoals);
+    const rank = (list: AwardLine[], order: (a: AwardLine, b: AwardLine) => number) =>
+      [...list].sort(order).slice(0, AWARD_RACE_SIZE);
+    const scorers = rank(
+      all.filter((p) => p.goals > 0),
+      byGoals,
+    );
+    const userScorers = rank(
+      mineOnly.filter((p) => p.goals > 0),
+      byGoals,
+    );
+    const best = rank(eligible.length ? eligible : all, byRating);
+    const userBest = rank(mineEligible.length ? mineEligible : mineOnly, byRating);
     return {
-      topScorer: scorer && scorer.goals > 0 ? scorer : null,
-      playerOfSeason: pick(eligible.length ? eligible : all, byRating),
-      userTopScorer: userScorer && userScorer.goals > 0 ? userScorer : null,
-      userBestPlayer: pick(mineEligible.length ? mineEligible : mineOnly, byRating),
+      topScorer: scorers[0] ?? null,
+      playerOfSeason: best[0] ?? null,
+      userTopScorer: userScorers[0] ?? null,
+      userBestPlayer: userBest[0] ?? null,
+      races: {
+        topScorer: scorers,
+        playerOfSeason: best,
+        userTopScorer: userScorers,
+        userBestPlayer: userBest,
+      },
     };
   }
 

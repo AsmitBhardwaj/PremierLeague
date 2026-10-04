@@ -314,6 +314,23 @@ describe('season awards', () => {
     expect(awards.playerOfSeason!.averageRating).toBeGreaterThan(6);
   }, 60_000);
 
+  it('list the ranked top three behind each award, led by the winner', () => {
+    const awards = finish(5, false).awards();
+    const { races } = awards;
+    expect(races.topScorer[0]).toBe(awards.topScorer);
+    expect(races.playerOfSeason[0]).toBe(awards.playerOfSeason);
+    expect(races.userTopScorer[0]).toBe(awards.userTopScorer);
+    expect(races.userBestPlayer[0]).toBe(awards.userBestPlayer);
+    expect(races.topScorer).toHaveLength(3);
+    for (const race of [races.topScorer, races.userTopScorer]) {
+      const goals = race.map((p) => p.goals);
+      expect(goals).toEqual([...goals].sort((a, b) => b - a));
+    }
+    const ratings = races.playerOfSeason.map((p) => p.averageRating);
+    expect(ratings).toEqual([...ratings].sort((a, b) => b - a));
+    expect(new Set(races.topScorer.map((p) => p.playerId)).size).toBe(races.topScorer.length);
+  }, 60_000);
+
   it("pick the user's own top scorer and best player from his own squad", () => {
     const career = finish(5, false);
     const awards = career.awards();

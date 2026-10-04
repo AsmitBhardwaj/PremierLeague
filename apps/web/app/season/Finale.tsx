@@ -3,6 +3,7 @@
 import type { AwardLine } from '@pl/engine';
 import { useState } from 'react';
 import { Card } from '../components/Card';
+import { ClubBadge, positionEdge } from '../components/ClubBadge';
 import { LeagueTable } from './LeagueTable';
 import {
   cleanSheets,
@@ -14,42 +15,74 @@ import {
   userPosition,
 } from './lib/format';
 import type { SeasonView } from './lib/protocol';
+import { USER_CLUB_ID } from './lib/setup';
 
-function Award({
+type AwardKind = 'goals' | 'rating';
+
+const unit = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** The hero number and its unit: "46 goals" or "7.28 avg rating". */
+const hero = (kind: AwardKind, line: AwardLine): { value: string; unit: string } =>
+  kind === 'goals'
+    ? { value: String(line.goals), unit: line.goals === 1 ? 'goal' : 'goals' }
+    : { value: line.averageRating.toFixed(2), unit: 'avg rating' };
+
+const secondary = (kind: AwardKind, line: AwardLine): string =>
+  kind === 'goals'
+    ? `${unit(line.assists, 'assist')} · ${unit(line.appearances, 'app')}`
+    : `${unit(line.goals, 'goal')} · ${unit(line.assists, 'assist')} · ${unit(line.appearances, 'app')}`;
+
+/** One award: a card for the winner, and the top three underneath so the race is visible. */
+function AwardCard({
   label,
-  line,
-  names,
-  stat,
+  mine,
+  kind,
+  race,
+  codeOf,
 }: {
   label: string;
-  line: AwardLine | null;
-  names: ReadonlyMap<string, string>;
-  stat: (line: AwardLine) => string;
+  /** Your club's awards carry a volt label to set them apart from the league's. */
+  mine: boolean;
+  kind: AwardKind;
+  race: readonly AwardLine[];
+  codeOf: (clubId: string) => string;
 }) {
+  const winner = race[0];
   return (
-    <div className="se-award">
-      <dt>{label}</dt>
-      {line ? (
-        <dd>
-          <strong>{line.name}</strong>
-          <span>
-            {line.position} · {names.get(line.clubId) ?? line.clubId}
-          </span>
-          <span>{stat(line)}</span>
-        </dd>
-      ) : (
-        <dd>
-          <span>None</span>
-        </dd>
-      )}
-    </div>
+    <article className="aw">
+      <div className={`aw-card${winner ? ` ${positionEdge(winner.position)}` : ''}`}>
+        <p className={`aw-label${mine ? ' mine' : ''}`}>{label}</p>
+        {winner ? (
+          <>
+            <div className="aw-who">
+              <ClubBadge code={codeOf(winner.clubId)} />
+              <h3>{winner.name}</h3>
+              <span className="aw-pos">{winner.position}</span>
+            </div>
+            <p className="aw-hero">
+              {hero(kind, winner).value} <span>{hero(kind, winner).unit}</span>
+            </p>
+            <p className="aw-more">{secondary(kind, winner)}</p>
+          </>
+        ) : (
+          <p className="aw-more">Nobody scored this season.</p>
+        )}
+      </div>
+      {race.length > 0 ? (
+        <ol className="aw-race" aria-label={`${label}: top ${race.length}`}>
+          {race.map((line, index) => (
+            <li key={line.playerId}>
+              <b>{index + 1}</b>
+              <span className="aw-race-name">{line.name}</span>
+              <span className="aw-race-club">{codeOf(line.clubId)}</span>
+              <strong>{hero(kind, line).value}</strong>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </article>
   );
 }
-
-const goalsLine = (l: AwardLine) =>
-  `${l.goals} ${l.goals === 1 ? 'goal' : 'goals'} · ${l.assists} ${l.assists === 1 ? 'assist' : 'assists'}`;
-const ratingLine = (l: AwardLine) =>
-  `${l.averageRating.toFixed(2)} average rating · ${l.appearances} appearances`;
 
 /** The season is over: final table, finish against the prediction, awards and a share card. */
 export function SeasonFinale({
@@ -83,6 +116,8 @@ export function SeasonFinale({
     awards?.userTopScorer ?? null,
   );
   const name = view.identity.name;
+  const codeOf = (clubId: string): string =>
+    clubId === USER_CLUB_ID ? view.identity.shortName || name : clubId;
   const shareText = `${name} finished ${ordinal(position)} with ${row.points} points in a 38-match season (${won}W ${drawn}D ${lost}L). ${summary}.${
     awards?.userTopScorer
       ? ` Top scorer: ${awards.userTopScorer.name}, ${awards.userTopScorer.goals} goals.`
@@ -172,36 +207,35 @@ export function SeasonFinale({
       </Card>
 
       {awards ? (
-        <div className="se-awards-grid">
-          <Card>
-            <p className="card-kicker">League awards</p>
-            <dl className="se-awards">
-              <Award label="Top scorer" line={awards.topScorer} names={names} stat={goalsLine} />
-              <Award
-                label="Player of the season"
-                line={awards.playerOfSeason}
-                names={names}
-                stat={ratingLine}
-              />
-            </dl>
-          </Card>
-          <Card>
-            <p className="card-kicker">Your club</p>
-            <dl className="se-awards">
-              <Award
-                label="Your top scorer"
-                line={awards.userTopScorer}
-                names={names}
-                stat={goalsLine}
-              />
-              <Award
-                label="Your best player"
-                line={awards.userBestPlayer}
-                names={names}
-                stat={ratingLine}
-              />
-            </dl>
-          </Card>
+        <div className="aw-grid">
+          <AwardCard
+            label="Top scorer"
+            mine={false}
+            kind="goals"
+            race={awards.races.topScorer}
+            codeOf={codeOf}
+          />
+          <AwardCard
+            label="Player of the season"
+            mine={false}
+            kind="rating"
+            race={awards.races.playerOfSeason}
+            codeOf={codeOf}
+          />
+          <AwardCard
+            label="Your top scorer"
+            mine
+            kind="goals"
+            race={awards.races.userTopScorer}
+            codeOf={codeOf}
+          />
+          <AwardCard
+            label="Your player of the season"
+            mine
+            kind="rating"
+            race={awards.races.userBestPlayer}
+            codeOf={codeOf}
+          />
         </div>
       ) : null}
 

@@ -42,7 +42,7 @@
   box-shadow: 8px 8px 0 var(--deep-green);
 }
 
-.se-fixture h1 {
+.se-fixture h2 {
   margin: 0 0 4px;
   font-family: var(--display);
   font-size: clamp(32px, 4vw, 48px);
@@ -51,7 +51,7 @@
   text-transform: uppercase;
 }
 
-.se-fixture h1 span {
+.se-fixture h2 span {
   color: var(--text-muted);
   font-size: 0.6em;
 }
@@ -344,7 +344,8 @@
   padding-block: 48px calc(48px + env(safe-area-inset-bottom));
 }
 
-.se-window h1 {
+.se-window h1,
+.se-window h2 {
   margin: 0 0 12px;
   font-family: var(--display);
   font-size: clamp(38px, 4.6vw, 64px);
@@ -433,42 +434,6 @@
   font-weight: 600;
 }
 
-.se-awards-grid {
-  display: grid;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-@media (min-width: 900px) {
-  .se-awards-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.se-awards {
-  margin: 12px 0 0;
-  display: grid;
-  gap: 16px;
-}
-
-.se-award dt {
-  font-family: var(--display);
-  font-size: 13px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.se-award dd {
-  margin: 4px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.se-award dd strong {
-  font-size: 20px;
-}
-
 .se-finale .se-actions {
   margin-top: 24px;
 }
@@ -486,4 +451,161 @@
   list-style: none;
   font-size: 18px;
   font-weight: 600;
+}
+
+/* End-of-season awards: four cards in a 2x2 grid with the top three under each. */
+.aw-grid {
+  margin: 28px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 34px 32px;
+  align-items: start;
+}
+
+.aw {
+  min-width: 0;
+}
+
+.aw-card {
+  padding: 28px 28px 28px 34px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--deep-green);
+}
+
+.aw-card.pos-edge {
+  box-shadow:
+    inset 8px 0 0 var(--pos-edge),
+    10px 10px 0 var(--deep-green);
+}
+
+@media (max-width: 760px) {
+  .aw-card.pos-edge {
+    box-shadow:
+      inset 8px 0 0 var(--pos-edge),
+      8px 8px 0 var(--deep-green);
+  }
+}
+
+.aw-label {
+  margin: 0 0 18px;
+  display: inline-block;
+  padding: 3px 0;
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.aw-label.mine {
+  padding: 3px 10px;
+  background: var(--volt);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+}
+
+.aw-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.aw-who .club-badge {
+  width: 44px;
+  height: 44px;
+  font-size: 13px;
+}
+
+.aw-who h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(30px, 3.4vw, 44px);
+  font-weight: 600;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.aw-pos {
+  padding: 0 8px;
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.aw-hero {
+  margin: 18px 0 6px;
+  font-family: var(--display);
+  font-size: clamp(56px, 7vw, 88px);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.aw-hero span {
+  color: var(--text-muted);
+  font-size: 0.3em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aw-more {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+.aw-race {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aw-race li {
+  padding: 7px 4px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto 56px;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--hairline);
+  font-size: 17px;
+}
+
+.aw-race b {
+  font-family: var(--display);
+  font-size: 16px;
+}
+
+.aw-race-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aw-race-club {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.aw-race strong {
+  font-family: var(--display);
+  font-size: 20px;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .aw-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .aw-card {
+    padding: 24px 20px 24px 28px;
+    box-shadow: 8px 8px 0 var(--deep-green);
+  }
 }

@@ -27,6 +27,7 @@ import {
 import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
+import { matchesName } from './lib/search';
 import {
   STORAGE_KEY,
   emptyIdentity,
@@ -252,7 +253,7 @@ function SquadStep({
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState('ALL');
   const [club, setClub] = useState('ALL');
-  const [sort, setSort] = useState('value-asc');
+  const [sort, setSort] = useState('value-desc');
   const [message, setMessage] = useState('');
   const selectedIds = useMemo(() => new Set(selected.map((player) => player.id)), [selected]);
   const counts = positionCounts(selected);
@@ -269,11 +270,10 @@ function SquadStep({
   }, [selected]);
   const clubs = useMemo(() => [...new Set(market.map((player) => player.clubName))].sort(), []);
   const filtered = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase();
     return market
       .filter(
         (player) =>
-          (!term || player.name.toLocaleLowerCase().includes(term)) &&
+          matchesName(player.name, search) &&
           (position === 'ALL' || player.position === position) &&
           (club === 'ALL' || player.clubName === club),
       )
@@ -376,8 +376,8 @@ function SquadStep({
             <label className="field">
               <span>Sort</span>
               <select value={sort} onChange={(event) => setSort(event.target.value)}>
-                <option value="value-asc">Value: low to high</option>
                 <option value="value-desc">Value: high to low</option>
+                <option value="value-asc">Value: low to high</option>
                 <option value="rating-desc">Rating: high to low</option>
                 <option value="name">Name</option>
               </select>

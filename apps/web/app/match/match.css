@@ -1479,3 +1479,15 @@
     animation: none;
   }
 }
+
+/* Season: a player who is out injured or suspended. */
+.mt-out {
+  display: block;
+  padding: 0 4px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

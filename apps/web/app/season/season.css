@@ -1,0 +1,330 @@
+/* Phase 5 season: hub, league table, post-match and window screens. */
+
+.se-loading {
+  padding-block: 72px;
+  font-family: var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.se-error {
+  margin-block: 16px 0;
+  padding: 12px 16px;
+  border: 2px solid var(--signal-red);
+  background: var(--paper);
+  font-weight: 500;
+}
+
+.se-hub {
+  display: grid;
+  gap: 24px;
+  padding-block: 32px calc(48px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .se-hub {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+    align-items: start;
+  }
+}
+
+.se-hub-main,
+.se-hub-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.se-card {
+  padding: 20px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 8px 8px 0 var(--deep-green);
+}
+
+.se-fixture h1 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.se-fixture h1 span {
+  color: var(--text-muted);
+  font-size: 0.6em;
+}
+
+.se-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.se-sim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+
+.se-sim span {
+  margin-right: 4px;
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.se-sim button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--ink);
+  background: var(--chip);
+  color: var(--ink);
+  font: 500 14px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.se-sim button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.se-big {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 1;
+}
+
+.se-big span {
+  color: var(--text-muted);
+  font-family: var(--body);
+  font-size: 16px;
+}
+
+.se-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 0 0 12px;
+}
+
+.se-facts dt {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.se-facts dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 28px;
+}
+
+.se-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.se-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.se-gap {
+  margin-top: 16px;
+}
+
+.mt-warning-inline {
+  color: var(--warning);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.se-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+}
+
+.se-letter.W {
+  background: var(--volt);
+}
+
+.se-letter.D {
+  background: var(--chip);
+}
+
+.se-letter.L {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.se-abandon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.se-abandon p {
+  margin: 0;
+}
+
+.se-link {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.se-back {
+  padding-block: 16px;
+}
+
+.se-pos {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 32px;
+  text-transform: uppercase;
+}
+
+.se-pos span {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+.se-table-wrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.se-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.se-table caption {
+  padding: 10px 12px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--display);
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.se-table th,
+.se-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.se-table th:first-child,
+.se-table th[scope='row'] {
+  text-align: center;
+  font-weight: 600;
+}
+
+.se-table thead th {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.se-table .se-club {
+  text-align: left;
+  font-weight: 500;
+}
+
+.se-table .se-move {
+  width: 22px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.se-table .se-move.up {
+  color: #1c6e3d;
+}
+
+.se-table .se-move.down {
+  color: var(--signal-red);
+}
+
+.se-table tr.se-user {
+  background: var(--volt);
+  font-weight: 600;
+}
+
+.se-table tr.se-line-top4 td,
+.se-table tr.se-line-top4 th {
+  border-bottom: 2px solid var(--ink);
+}
+
+.se-table tr.se-line-drop td,
+.se-table tr.se-line-drop th {
+  border-top: 2px solid var(--signal-red);
+}
+
+@media (max-width: 560px) {
+  .se-hide-small {
+    display: none;
+  }
+}
+
+.se-after {
+  display: grid;
+  gap: 24px;
+  margin-top: 24px;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .se-after {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    align-items: start;
+  }
+}
+
+.se-window {
+  padding-block: 48px calc(48px + env(safe-area-inset-bottom));
+}
+
+.se-window h1 {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: clamp(38px, 4.6vw, 64px);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}

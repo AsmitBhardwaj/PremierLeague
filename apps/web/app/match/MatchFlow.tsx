@@ -277,7 +277,7 @@ export function MatchFlow() {
       ) : null}
       {stage === 'half_time' && active?.snapshot && sides ? (
         <HalfTime
-          session={active.session}
+          team={active.session.userTeam}
           snapshot={active.snapshot}
           firstHalf={active.firstHalf}
           sides={sides}

@@ -1,6 +1,7 @@
 'use client';
 
 import type { MatchResult, PlayerMatchRating, Team, TeamStats } from '@pl/engine';
+import type { ReactNode } from 'react';
 import { rankPlayers, playerOfTheMatch } from './lib/fulltime';
 import type { ViewerSides } from './MatchViewer';
 
@@ -62,12 +63,15 @@ export function FullTime({
   seed,
   onPlayAgain,
   onChangeTeam,
+  actions,
 }: {
   result: MatchResult;
   sides: ViewerSides;
   seed: number;
-  onPlayAgain: () => void;
-  onChangeTeam: () => void;
+  onPlayAgain?: () => void;
+  onChangeTeam?: () => void;
+  /** Replaces the friendly's buttons (a season has no replay). */
+  actions?: ReactNode;
 }) {
   const { home, away, userSide } = sides;
   const best = playerOfTheMatch(result.playerRatings);
@@ -139,25 +143,29 @@ export function FullTime({
         />
       </div>
 
-      <div className="ht-actions ft-actions">
-        <button
-          type="button"
-          className="button button-primary button-default"
-          onClick={onPlayAgain}
-        >
-          Play again <span aria-hidden="true">→</span>
-        </button>
-        <button
-          type="button"
-          className="button button-secondary button-default"
-          onClick={onChangeTeam}
-        >
-          Change team
-        </button>
-        <a className="button button-secondary button-default" href="/play">
-          Back to prediction
-        </a>
-      </div>
+      {actions !== undefined ? (
+        actions
+      ) : (
+        <div className="ht-actions ft-actions">
+          <button
+            type="button"
+            className="button button-primary button-default"
+            onClick={onPlayAgain}
+          >
+            Play again <span aria-hidden="true">→</span>
+          </button>
+          <button
+            type="button"
+            className="button button-secondary button-default"
+            onClick={onChangeTeam}
+          >
+            Change team
+          </button>
+          <a className="button button-secondary button-default" href="/play">
+            Back to prediction
+          </a>
+        </div>
+      )}
       <p className="mt-seed">Match seed {seed}</p>
     </section>
   );

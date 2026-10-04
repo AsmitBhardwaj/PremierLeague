@@ -1,0 +1,57 @@
+import { Career, cacheOf, parseCareerSave, replayCareer, type CareerSave } from '@pl/engine';
+import { describe, expect, it } from 'vitest';
+import playerData from '../../play/data/players.json';
+import { balancedBuild } from '../../play/lib/budget-helpers';
+import { computeReplacedClub } from '../../play/lib/clubs';
+import { pickFormationXI, type MarketPlayer } from '../../play/lib/squad';
+import { USER_CLUB_ID, buildSetup, marketDataVersion } from './setup';
+
+const market = playerData as MarketPlayer[];
+const replaced = computeReplacedClub(market);
+const squad = balancedBuild(2750);
+const starters = pickFormationXI(squad, '4-4-2');
+
+describe('season setup from the real market', () => {
+  it("builds a 20-club league with the user in the replaced club's place", () => {
+    const setup = buildSetup(market, replaced.id, 'Test FC', squad, 11);
+    expect(setup.clubs).toHaveLength(20);
+    expect(setup.clubs.some((c) => c.id === replaced.id)).toBe(false);
+    expect(setup.clubs[0]).toMatchObject({ id: USER_CLUB_ID, name: 'Test FC' });
+    expect(setup.clubs[0]!.players).toHaveLength(18);
+    for (const club of setup.clubs.slice(1)) expect(club.players.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it('plays a whole season, pauses at the window, and replays from its save', () => {
+    const setup = buildSetup(market, replaced.id, 'Test FC', squad, 11);
+    const career = new Career(setup);
+    career.apply({ type: 'lineup', formation: '4-4-2', starters, tactic: 'balanced' });
+    career.apply({ type: 'sim', to: 'end' });
+    expect(career.phase).toBe('window');
+    career.apply({ type: 'closeWindow' });
+    career.apply({ type: 'play' });
+    career.apply({ type: 'sim', to: 'end' });
+    expect(career.phase).toBe('finished');
+    expect(career.season.table()).toHaveLength(20);
+
+    const dataVersion = marketDataVersion(market);
+    const save: CareerSave = {
+      version: 1,
+      seed: 11,
+      dataVersion,
+      identity: { name: 'Test FC' },
+      replacedClubId: replaced.id,
+      squadIds: squad.map((p) => p.id),
+      prediction: null,
+      decisions: career.decisions,
+      cache: cacheOf(career),
+    };
+    const parsed = parseCareerSave(JSON.parse(JSON.stringify(save)))!;
+    const result = replayCareer(parsed, setup, dataVersion);
+    expect(result.ok).toBe(true);
+    expect(replayCareer(parsed, setup, 'other').ok).toBe(false);
+  }, 120_000);
+
+  it('has a stable data version', () => {
+    expect(marketDataVersion(market)).toBe(marketDataVersion(market));
+  });
+});

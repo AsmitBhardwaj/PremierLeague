@@ -1,14 +1,16 @@
 'use client';
 
-import { TUNING, type MatchEvent, type MatchSnapshot, type Player, type Tactic } from '@pl/engine';
+import {
+  TUNING,
+  type MatchEvent,
+  type MatchSnapshot,
+  type Player,
+  type Tactic,
+  type Team,
+} from '@pl/engine';
 import { useState } from 'react';
 import { POSITION_ORDER } from '../play/lib/squad';
-import {
-  MatchSession,
-  statsFromEvents,
-  validateSubstitution,
-  type PendingSubstitution,
-} from './lib/match';
+import { statsFromEvents, validateSubstitution, type PendingSubstitution } from './lib/match';
 import { TACTICS } from './lib/tactics';
 import { activePlayers, scoreAt } from './lib/timeline';
 import type { ViewerSides } from './MatchViewer';
@@ -42,14 +44,15 @@ function StatRow({
 }
 
 export function HalfTime({
-  session,
+  team,
   snapshot,
   firstHalf,
   sides,
   tactic,
   onContinue,
 }: {
-  session: MatchSession;
+  /** The user's side as fielded for this match. */
+  team: Team;
   snapshot: MatchSnapshot;
   firstHalf: readonly MatchEvent[];
   sides: ViewerSides;
@@ -57,7 +60,6 @@ export function HalfTime({
   onContinue: (tactic: Tactic, substitutions: PendingSubstitution[]) => void;
 }) {
   const { home, away, userSide } = sides;
-  const team = session.userTeam;
   const [nextTactic, setNextTactic] = useState<Tactic>(tactic);
   const [pending, setPending] = useState<PendingSubstitution[]>([]);
   const [off, setOff] = useState<string | null>(null);

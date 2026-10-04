@@ -27,6 +27,26 @@ const statusLabel = (status: string) =>
 
 type Tab = 'team' | 'tactics';
 
+export interface PlayerStatus {
+  /** 0-100. */
+  fitness: number;
+  /** Form modifier in rating points (about -2 to +2). */
+  form: number;
+  /** Matches still missed through injury or suspension. */
+  outFor: number;
+}
+
+/** In a season the fixture is fixed, odds and player condition come from the season. */
+export interface SeasonPickProps {
+  opponentName: string;
+  odds: { win: number; draw: number; loss: number } | null;
+  status: (playerId: string) => PlayerStatus | undefined;
+  kickoffLabel: string;
+}
+
+const formLabel = (form: number): string =>
+  Math.abs(form) < 0.05 ? 'Neutral' : `${form > 0 ? '+' : '−'}${Math.abs(form).toFixed(1)}`;
+
 export function PickTeam({
   preparation,
   setPreparation,
@@ -36,6 +56,7 @@ export function PickTeam({
   mode,
   onModeChange,
   onKickOff,
+  season,
 }: {
   preparation: MatchPreparation;
   setPreparation: (next: MatchPreparation) => void;
@@ -45,6 +66,7 @@ export function PickTeam({
   mode: PlaybackMode;
   onModeChange: (mode: PlaybackMode) => void;
   onKickOff: () => void;
+  season?: SeasonPickProps;
 }) {
   const { squad, starterIds, formation, tactic, opponentId, venue } = preparation;
   const [tab, setTab] = useState<Tab>('team');
@@ -56,13 +78,17 @@ export function PickTeam({
   const bench = benchOf(squad, starterIds);
   const errors = validateLineup(squad, starterIds, formation);
   const inspected = squad.find((player) => player.id === inspectedId) ?? starters[0];
-  const opponent = opponents.find((club) => club.id === opponentId) ?? opponents[0]!;
+  const opponent = season
+    ? { id: opponentId, name: season.opponentName }
+    : (opponents.find((club) => club.id === opponentId) ?? opponents[0]!);
 
-  const odds = useMemo(() => {
-    if (errors.length) return null;
+  const seasonOdds = season?.odds ?? null;
+  const computedOdds = useMemo(() => {
+    if (season || errors.length) return null;
     const user = createUserMatchTeam(preparation);
     return fixtureOdds(user, buildRealClubTeam(market, opponentId), venue);
-  }, [errors.length, preparation, market, opponentId, venue]);
+  }, [season, errors.length, preparation, market, opponentId, venue]);
+  const odds = season ? seasonOdds : computedOdds;
 
   const update = (patch: Partial<MatchPreparation>) => setPreparation({ ...preparation, ...patch });
 
@@ -154,6 +180,9 @@ export function PickTeam({
                             {player.overall}
                           </span>
                           <strong>{player.name}</strong>
+                          {season && (season.status(player.id)?.outFor ?? 0) > 0 ? (
+                            <small className="mt-out">Out {season.status(player.id)!.outFor}</small>
+                          ) : null}
                         </button>
                       ));
                     })}
@@ -172,7 +201,12 @@ export function PickTeam({
                             {player.position}
                           </span>
                           <strong>{player.name}</strong>
-                          <small>{player.overall}</small>
+                          <small>
+                            {player.overall}
+                            {season && (season.status(player.id)?.outFor ?? 0) > 0
+                              ? ` · Out ${season.status(player.id)!.outFor}`
+                              : ''}
+                          </small>
                         </button>
                       ))}
                     </div>
@@ -198,14 +232,29 @@ export function PickTeam({
                       <p className="mt-muted">
                         {inspected.clubName} · {statusLabel(inspected.status)}
                       </p>
+                      {season && (season.status(inspected.id)?.outFor ?? 0) > 0 ? (
+                        <p className="mt-warning">
+                          Out {season.status(inspected.id)!.outFor} match
+                          {season.status(inspected.id)!.outFor > 1 ? 'es' : ''}. A same-position
+                          replacement plays if he is still in your XI.
+                        </p>
+                      ) : null}
                       <dl className="mt-facts">
                         <div>
                           <dt>Fitness</dt>
-                          <dd>100%</dd>
+                          <dd>
+                            {season
+                              ? `${Math.round(season.status(inspected.id)?.fitness ?? 100)}%`
+                              : '100%'}
+                          </dd>
                         </div>
                         <div>
                           <dt>Form</dt>
-                          <dd aria-label="Form not tracked yet">—</dd>
+                          {season ? (
+                            <dd>{formLabel(season.status(inspected.id)?.form ?? 0)}</dd>
+                          ) : (
+                            <dd aria-label="Form not tracked yet">—</dd>
+                          )}
                         </div>
                         <div>
                           <dt>Positions</dt>
@@ -259,36 +308,44 @@ export function PickTeam({
           <h2>
             {preparation.identity.shortName || 'You'} <span>vs</span> {opponent.name}
           </h2>
-          <label className="mt-field">
-            <span>Opponent</span>
-            <select
-              value={opponentId}
-              onChange={(event) => update({ opponentId: event.target.value })}
-            >
-              {opponents.map((club) => (
-                <option key={club.id} value={club.id}>
-                  {club.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="mt-field">
-            <span id="venue-label">Venue</span>
-            <div className="mt-venue" role="radiogroup" aria-labelledby="venue-label">
-              {(['home', 'away'] as Venue[]).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  role="radio"
-                  aria-checked={venue === item}
-                  className={venue === item ? 'selected' : ''}
-                  onClick={() => update({ venue: item })}
+          {season ? (
+            <p className="mt-muted">
+              {venue === 'home' ? 'Home' : 'Away'} · fixed by the league calendar
+            </p>
+          ) : (
+            <>
+              <label className="mt-field">
+                <span>Opponent</span>
+                <select
+                  value={opponentId}
+                  onChange={(event) => update({ opponentId: event.target.value })}
                 >
-                  {item === 'home' ? 'Home' : 'Away'}
-                </button>
-              ))}
-            </div>
-          </div>
+                  {opponents.map((club) => (
+                    <option key={club.id} value={club.id}>
+                      {club.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="mt-field">
+                <span id="venue-label">Venue</span>
+                <div className="mt-venue" role="radiogroup" aria-labelledby="venue-label">
+                  {(['home', 'away'] as Venue[]).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      role="radio"
+                      aria-checked={venue === item}
+                      className={venue === item ? 'selected' : ''}
+                      onClick={() => update({ venue: item })}
+                    >
+                      {item === 'home' ? 'Home' : 'Away'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           <div className="mt-field">
             <span id="mode-label">View</span>
             <div className="mt-modes" role="radiogroup" aria-labelledby="mode-label">
@@ -331,7 +388,7 @@ export function PickTeam({
           ) : (
             <p className="mt-warning">Fix the lineup to see the odds.</p>
           )}
-          <p className="mt-seed">Match seed {seed}</p>
+          {season ? null : <p className="mt-seed">Match seed {seed}</p>}
         </aside>
       </div>
 
@@ -355,7 +412,7 @@ export function PickTeam({
             onClick={onKickOff}
             disabled={errors.length > 0}
           >
-            Kick off <span aria-hidden="true">→</span>
+            {season?.kickoffLabel ?? 'Kick off'} <span aria-hidden="true">→</span>
           </button>
         </div>
       </div>

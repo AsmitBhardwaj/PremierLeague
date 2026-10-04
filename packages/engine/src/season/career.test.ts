@@ -8,7 +8,6 @@ import {
   parseCareerSave,
   replayCareer,
   type CareerSave,
-  type Decision,
   type SeasonClubInput,
   type SeasonSetup,
 } from './index';
@@ -31,12 +30,14 @@ const setup = (seed = 3): SeasonSetup => ({
   ],
 });
 
-const subs = (career: Career): Decision => {
+/** A kick-off with the current lineup, then half-time changes (a tactic and a midfield swap). */
+const playWithChanges = (career: Career): void => {
   const squad = career.squad();
   const lineup = career.userLineup();
   const off = lineup.starters.find((id) => squad.find((p) => p.id === id)!.position === 'MID')!;
   const on = squad.find((p) => p.position === 'MID' && !lineup.starters.includes(p.id))!.id;
-  return { type: 'play', halfTime: { tactic: 'high_press', substitutions: [{ off, on }] } };
+  career.kickOff(lineup);
+  career.halfTime({ tactic: 'high_press', substitutions: [{ off, on }] });
 };
 
 describe('Career', () => {
@@ -46,7 +47,7 @@ describe('Career', () => {
     expect(career.phase).toBe('window');
     expect(career.round).toBe(WINDOW_AFTER_ROUND);
     expect(() => career.apply({ type: 'sim', to: 'next' })).toThrow();
-    expect(() => career.beginPlay()).toThrow();
+    expect(() => career.kickOff(career.userLineup())).toThrow();
     career.apply({ type: 'closeWindow' });
     expect(career.phase).toBe('matchday');
     expect(() => career.apply({ type: 'closeWindow' })).toThrow();
@@ -66,13 +67,13 @@ describe('Career', () => {
   it('replays its decision log to exactly the same season', () => {
     const live = new Career(setup(9));
     live.apply({ type: 'sim', to: 'next' });
-    live.apply(subs(live));
+    playWithChanges(live);
     const lineup = live.userLineup();
     live.apply({ ...lineup, type: 'lineup', tactic: 'counter', starters: [...lineup.starters] });
-    live.apply({ type: 'play' });
+    live.playInstant(live.userLineup());
     live.apply({ type: 'sim', to: 'end' });
     live.apply({ type: 'closeWindow' });
-    live.apply(subs(live));
+    playWithChanges(live);
     live.apply({ type: 'sim', to: 'end' });
     expect(live.phase).toBe('finished');
 
@@ -82,21 +83,85 @@ describe('Career', () => {
     expect(replayed.decisions).toEqual(live.decisions);
   }, 120_000);
 
-  it('logs a viewed match once, and an abandoned match not at all', () => {
+  it('logs the XI at kick-off and the half-time changes when the second half starts', () => {
     const career = new Career(setup());
-    const first = career.beginPlay();
-    const events = first.user.snapshot.events.length;
-    career.abandonPlay();
-    expect(career.decisions).toHaveLength(0);
+    const lineup = career.userLineup();
+    career.kickOff({ ...lineup, tactic: 'counter' });
+    expect(career.decisions.map((d) => d.type)).toEqual(['kickoff']);
+    expect(career.inProgress).toBeDefined();
     expect(career.round).toBe(0);
+    expect(career.lastWatched).toBeUndefined();
 
-    const again = career.beginPlay();
-    expect(again.user.snapshot.events).toHaveLength(events);
-    career.completePlay();
-    expect(career.decisions).toEqual([{ type: 'play' }]);
+    career.halfTime({ tactic: 'defensive' });
+    expect(career.decisions.map((d) => d.type)).toEqual(['kickoff', 'halftime']);
+    expect(career.inProgress).toBeUndefined();
     expect(career.round).toBe(1);
-    expect(career.lastMatchday?.userMatch).toBeDefined();
-    expect(() => career.completePlay()).toThrow();
+    expect(career.lastWatched?.result.score).toBeDefined();
+    expect(() => career.halfTime()).toThrow();
+  });
+
+  it('cannot be refreshed into a different XI or tactic once the match has kicked off', () => {
+    const live = new Career(setup(4));
+    const lineup = live.userLineup();
+    const first = live.kickOff(lineup);
+    const firstHalf = first.user.snapshot.events.length;
+
+    // A refresh rebuilds the career from its log: the match is still open at half-time.
+    const refreshed = new Career(setup(4), JSON.parse(JSON.stringify(live.decisions)));
+    expect(refreshed.inProgress).toBeDefined();
+    expect(refreshed.inProgress!.user.snapshot.events).toHaveLength(firstHalf);
+    expect(refreshed.inProgress!.user.home.players.map((p) => p.id)).toEqual(
+      first.user.home.players.map((p) => p.id),
+    );
+
+    // Neither a new XI, a new kick-off nor a sim can be applied over the open match.
+    const other = [...lineup.starters].reverse();
+    expect(() =>
+      refreshed.apply({
+        type: 'lineup',
+        formation: lineup.formation,
+        starters: other,
+        tactic: 'counter',
+      }),
+    ).toThrow();
+    expect(() => refreshed.kickOff({ ...lineup, tactic: 'counter' })).toThrow();
+    expect(() => refreshed.apply({ type: 'sim', to: 'next' })).toThrow();
+    expect(refreshed.decisions).toEqual(live.decisions);
+  });
+
+  it('cannot be refreshed out of half-time decisions once the second half has started', () => {
+    const live = new Career(setup(6));
+    playWithChanges(live);
+    const logged = JSON.parse(JSON.stringify(live.decisions));
+
+    const refreshed = new Career(setup(6), logged);
+    expect(refreshed.inProgress).toBeUndefined();
+    expect(refreshed.round).toBe(1);
+    // There is no half-time left to decide, and no way back to the pick-team step.
+    expect(() => refreshed.halfTime({ tactic: 'defensive' })).toThrow();
+    expect(refreshed.decisions).toEqual(live.decisions);
+    expect(refreshed.decisions.find((d) => d.type === 'halftime')).toMatchObject({
+      tactic: 'high_press',
+    });
+  });
+
+  it('resumes to the identical final score, events and table', () => {
+    const live = new Career(setup(8));
+    playWithChanges(live);
+    const refreshed = new Career(setup(8), JSON.parse(JSON.stringify(live.decisions)));
+    expect(refreshed.lastWatched?.result.score).toEqual(live.lastWatched?.result.score);
+    expect(refreshed.lastWatched?.result.events).toEqual(live.lastWatched?.result.events);
+    expect(refreshed.lastWatched?.firstHalfEvents).toBe(live.lastWatched?.firstHalfEvents);
+    expect(refreshed.season.table()).toEqual(live.season.table());
+
+    // A match refreshed at half-time and then decided gives what the live one gave.
+    const a = new Career(setup(8));
+    a.kickOff(a.userLineup());
+    const b = new Career(setup(8), JSON.parse(JSON.stringify(a.decisions)));
+    a.halfTime({ tactic: 'defensive' });
+    b.halfTime({ tactic: 'defensive' });
+    expect(b.lastWatched?.result.score).toEqual(a.lastWatched?.result.score);
+    expect(b.season.table()).toEqual(a.season.table());
   });
 
   it('rejects a lineup with players from outside the squad', () => {
@@ -145,12 +210,12 @@ describe('career saves', () => {
   const build = (): { save: CareerSave; career: Career } => {
     const career = new Career(setup(5));
     career.apply({ type: 'sim', to: 'next' });
-    career.apply(subs(career));
+    playWithChanges(career);
     career.apply({ type: 'sim', to: 'january' });
     return {
       career,
       save: {
-        version: 1,
+        version: 2,
         seed: 5,
         dataVersion,
         identity: { name: 'Test FC' },
@@ -158,6 +223,7 @@ describe('career saves', () => {
         squadIds: career.squad().map((p) => p.id),
         prediction: { meanPoints: 50 },
         decisions: career.decisions,
+        revealed: -1,
         cache: cacheOf(career),
       },
     };
@@ -195,7 +261,8 @@ describe('career saves', () => {
 
   it('rejects malformed saves', () => {
     expect(parseCareerSave(null)).toBeNull();
-    expect(parseCareerSave({ version: 2 })).toBeNull();
+    expect(parseCareerSave({ version: 1 })).toBeNull();
+    expect(parseCareerSave({ ...build().save, version: 1 })).toBeNull();
     const { save } = build();
     expect(parseCareerSave({ ...save, decisions: [{ type: 'nonsense' }] })).toBeNull();
     expect(parseCareerSave({ ...save, seed: 1.5 })).toBeNull();

@@ -77,9 +77,20 @@ const readSavedMode = (): PlaybackMode | null => {
 const rawId = (seasonId: string): string => seasonId.slice(USER_CLUB_ID.length + 1);
 
 interface ActiveMatch {
-  start: MatchStart;
+  /** The match as kicked off; `snapshot` is only known while half-time is still undecided. */
+  start: Omit<MatchStart, 'snapshot'> & { snapshot: MatchStart['snapshot'] | null };
   finish: MatchFinish | null;
 }
+
+const startOf = (finish: MatchFinish, firstHalfEvents: number): ActiveMatch['start'] => ({
+  home: finish.home,
+  away: finish.away,
+  userSide: finish.userSide,
+  events: finish.result.events.slice(0, firstHalfEvents) as MatchEvent[],
+  snapshot: null,
+  seed: finish.seed,
+  round: finish.round,
+});
 
 function Notice({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -119,15 +130,35 @@ export function SeasonFlow() {
     return view.squadIds.map((id) => byId.get(id)!).filter(Boolean);
   }, [view]);
 
-  const settle = useCallback((next: SeasonView) => {
-    setView(next);
-    try {
-      localStorage.setItem(SEASON_STORAGE_KEY, JSON.stringify(next.save));
-    } catch {
-      // The season keeps running; it just cannot be resumed after a reload.
-    }
-    setStage(next.phase === 'window' ? 'window' : next.phase === 'finished' ? 'finished' : 'hub');
+  const setMatch = useCallback((next: ActiveMatch | null) => {
+    activeRef.current = next;
+    setActive(next);
   }, []);
+
+  const settle = useCallback(
+    (next: SeasonView) => {
+      setView(next);
+      try {
+        localStorage.setItem(SEASON_STORAGE_KEY, JSON.stringify(next.save));
+      } catch {
+        // The season keeps running; it just cannot be resumed after a reload.
+      }
+      // A match already decided in the log resumes at playback, never at its decisions.
+      if (next.resume?.kind === 'first_half') {
+        setMatch({ start: next.resume.start, finish: null });
+        setStage('first_half');
+        return;
+      }
+      if (next.resume?.kind === 'second_half') {
+        const { finish, firstHalfEvents } = next.resume;
+        setMatch({ start: startOf(finish, firstHalfEvents), finish });
+        setStage('second_half');
+        return;
+      }
+      setStage(next.phase === 'window' ? 'window' : next.phase === 'finished' ? 'finished' : 'hub');
+    },
+    [setMatch],
+  );
 
   // Start-up: resume a saved season, or begin one from the club built in /play.
   useEffect(() => {
@@ -212,23 +243,19 @@ export function SeasonFlow() {
     [],
   );
 
-  const setMatch = (next: ActiveMatch | null) => {
-    activeRef.current = next;
-    setActive(next);
-  };
-
+  /** Log half-time (or no changes) and play the second half: the match is then decided. */
   const sendFinish = useCallback(
-    async (halfTime?: {
+    async (changes?: {
       tactic?: MatchPreparation['tactic'];
       substitutions?: PendingSubstitution[];
     }) => {
       const response = await run((client) =>
         client.send({
-          kind: 'finish',
-          halfTime: halfTime
+          kind: 'halftime',
+          changes: changes
             ? {
-                tactic: halfTime.tactic,
-                substitutions: halfTime.substitutions?.map((s) => ({
+                tactic: changes.tactic,
+                substitutions: changes.substitutions?.map((s) => ({
                   off: rawId(s.off),
                   on: rawId(s.on),
                 })),
@@ -246,32 +273,47 @@ export function SeasonFlow() {
       setMatch({ ...activeRef.current, finish: response.finish });
       return response.finish;
     },
-    [run],
+    [run, setMatch],
   );
 
+  /** Kick off with this lineup. The XI, formation and tactic are logged now and cannot change. */
   const playNext = useCallback(
-    async (lineupChange?: {
+    async (lineup?: {
       formation: Formation;
       starters: string[];
       tactic: MatchPreparation['tactic'];
     }) => {
-      if (lineupChange) {
-        const sent = await run((client) => client.send({ kind: 'lineup', ...lineupChange }));
-        if (!sent) return;
-        setView(sent.view);
-      }
-      const response = await run((client) => client.send({ kind: 'begin' }));
-      if (!response?.start) return;
-      setView(response.view);
-      setMatch({ start: response.start, finish: null });
+      if (!view) return;
+      const chosen = lineup ?? {
+        formation: view.lineup.formation as Formation,
+        starters: [...view.lineup.starters],
+        tactic: view.lineup.tactic,
+      };
       if (mode === 'instant') {
-        const finished = await sendFinish();
-        if (finished) setStage('full_time');
+        const response = await run((client) => client.send({ kind: 'instant', ...chosen }));
+        if (!response?.finish) return;
+        setView(response.view);
+        try {
+          localStorage.setItem(SEASON_STORAGE_KEY, JSON.stringify(response.view.save));
+        } catch {
+          // See settle().
+        }
+        setMatch({ start: startOf(response.finish, 0), finish: response.finish });
+        setStage('full_time');
         return;
       }
+      const response = await run((client) => client.send({ kind: 'kickoff', ...chosen }));
+      if (!response?.start) return;
+      setView(response.view);
+      try {
+        localStorage.setItem(SEASON_STORAGE_KEY, JSON.stringify(response.view.save));
+      } catch {
+        // See settle().
+      }
+      setMatch({ start: response.start, finish: null });
       setStage('first_half');
     },
-    [mode, run, sendFinish],
+    [mode, run, setMatch, view],
   );
 
   const openPick = () => {
@@ -314,17 +356,24 @@ export function SeasonFlow() {
   };
 
   const afterMatch = () => {
-    setMatch(null);
-    if (view) {
-      setStage(view.phase === 'window' ? 'window' : view.phase === 'finished' ? 'finished' : 'hub');
-    }
+    void run(async (client) => {
+      const response = await client.send({ kind: 'ack' });
+      setMatch(null);
+      settle(response.view);
+    });
   };
 
-  const leaveToHub = async () => {
-    // Leaving a started match unfinished: it was never logged, so nothing is lost.
-    await run((client) => client.send({ kind: 'abandon' }));
-    setMatch(null);
-    setStage('hub');
+  const saveLineup = () => {
+    if (!preparation) return;
+    void run(async (client) => {
+      const response = await client.send({
+        kind: 'lineup',
+        formation: preparation.formation,
+        starters: preparation.starterIds,
+        tactic: preparation.tactic,
+      });
+      settle(response.view);
+    });
   };
 
   if (stage === 'loading') {
@@ -380,7 +429,9 @@ export function SeasonFlow() {
           </a>
           <p>
             <span>
-              {view.phase === 'finished' ? 'Final' : `Matchday ${Math.min(view.round + 1, 38)}`}
+              {view.phase === 'finished'
+                ? 'Final'
+                : `Matchday ${Math.min((active && stage !== 'hub' ? active.start.round : view.round) + 1, 38)}`}
             </span>
             <strong>{HEADINGS[stage]}</strong>
           </p>
@@ -426,21 +477,13 @@ export function SeasonFlow() {
           seed={0}
           mode={mode}
           onModeChange={changeMode}
-          onKickOff={() => {
-            const same =
-              preparation.formation === view.lineup.formation &&
-              preparation.tactic === view.lineup.tactic &&
-              preparation.starterIds.join() === view.lineup.starters.join();
-            void playNext(
-              same
-                ? undefined
-                : {
-                    formation: preparation.formation,
-                    starters: preparation.starterIds,
-                    tactic: preparation.tactic,
-                  },
-            );
-          }}
+          onKickOff={() =>
+            void playNext({
+              formation: preparation.formation,
+              starters: preparation.starterIds,
+              tactic: preparation.tactic,
+            })
+          }
           season={{
             opponentName: names.get(view.next.opponentId) ?? view.next.opponentId,
             odds: view.next.odds,
@@ -460,8 +503,11 @@ export function SeasonFlow() {
       ) : null}
       {stage === 'pick' ? (
         <div className="page-shell se-back">
+          <button type="button" className="se-link" onClick={saveLineup}>
+            Save this lineup and go back to the hub
+          </button>
           <button type="button" className="se-link" onClick={() => setStage('hub')}>
-            ← Back to the hub
+            ← Back without saving
           </button>
         </div>
       ) : null}
@@ -485,7 +531,7 @@ export function SeasonFlow() {
           seed={active.start.seed}
         />
       ) : null}
-      {stage === 'half_time' && active && sides ? (
+      {stage === 'half_time' && active?.start.snapshot && sides ? (
         <HalfTime
           team={sides[sides.userSide]}
           snapshot={active.start.snapshot}
@@ -514,11 +560,9 @@ export function SeasonFlow() {
         />
       ) : null}
       {stage === 'half_time' || stage === 'first_half' ? (
-        <div className="page-shell se-back">
-          <button type="button" className="se-link" onClick={() => void leaveToHub()}>
-            Leave the match (it is not counted until full time)
-          </button>
-        </div>
+        <p className="page-shell se-back mt-muted">
+          Your lineup is locked for this match. Refreshing brings you back here.
+        </p>
       ) : null}
 
       {stage === 'full_time' && active?.finish && sides ? (

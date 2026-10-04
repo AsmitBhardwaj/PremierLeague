@@ -22,6 +22,7 @@ export {
   type Decision,
   type HalfTimeDecision,
   type PendingPlay,
+  type WatchedMatch,
   type Phase,
   type PlayerView,
   type Projection,

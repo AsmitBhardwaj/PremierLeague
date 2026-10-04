@@ -28,14 +28,14 @@ describe('season setup from the real market', () => {
     career.apply({ type: 'sim', to: 'end' });
     expect(career.phase).toBe('window');
     career.apply({ type: 'closeWindow' });
-    career.apply({ type: 'play' });
+    career.playInstant(career.userLineup());
     career.apply({ type: 'sim', to: 'end' });
     expect(career.phase).toBe('finished');
     expect(career.season.table()).toHaveLength(20);
 
     const dataVersion = marketDataVersion(market);
     const save: CareerSave = {
-      version: 1,
+      version: 2,
       seed: 11,
       dataVersion,
       identity: { name: 'Test FC' },
@@ -43,6 +43,7 @@ describe('season setup from the real market', () => {
       squadIds: squad.map((p) => p.id),
       prediction: null,
       decisions: career.decisions,
+      revealed: -1,
       cache: cacheOf(career),
     };
     const parsed = parseCareerSave(JSON.parse(JSON.stringify(save)))!;

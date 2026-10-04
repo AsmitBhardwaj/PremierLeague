@@ -1,7 +1,8 @@
 import { createRng } from '../rng';
 import { teamProfile } from '../predict/ratings';
 import { expectedGoals, samplePoisson } from '../predict/surrogate';
-import type { MatchSnapshot, Player, Side, SideChanges, Tactic } from '../types';
+import type { MatchResult, MatchSnapshot, Player, Side, SideChanges, Tactic, Team } from '../types';
+import type { Fixture } from './fixtures';
 import { hashSeed } from './hash';
 import {
   Season,
@@ -23,12 +24,17 @@ export interface HalfTimeDecision {
 }
 
 /**
- * The decision log. Replaying it from the season seed reproduces the season exactly. Playback mode
+ * The decision log. A decision is logged the moment the simulation uses it, so it cannot be taken
+ * back: `kickoff` fixes the XI, formation and tactic (the first half is simulated from them) and
+ * `halftime` fixes the changes (the second half is simulated from them). Replaying it from the season seed reproduces the season exactly. Playback mode
  * (highlights, commentary, instant) is never logged: it cannot change an outcome.
  */
 export type Decision =
   | { type: 'lineup'; formation: string; starters: string[]; tactic: Tactic }
-  | { type: 'play'; halfTime?: HalfTimeDecision }
+  /** Kick-off of a match the user plays: logs the XI, formation and tactic the first half uses. */
+  | { type: 'kickoff'; formation: string; starters: string[]; tactic: Tactic }
+  /** Half-time changes, logged as the second half is simulated. The match is then decided. */
+  | ({ type: 'halftime' } & HalfTimeDecision)
   | { type: 'sim'; to: 'next' | 'january' | 'end' }
   | { type: 'transfer'; out: string; in: string }
   | { type: 'closeWindow' };
@@ -57,6 +63,18 @@ export interface PlayerView {
   assists: number;
 }
 
+/** A match the user kicked off and decided: both halves are in the log, so only playback is left. */
+export interface WatchedMatch {
+  round: number;
+  fixture: Fixture;
+  home: Team;
+  away: Team;
+  userSide: Side;
+  result: MatchResult;
+  /** Number of events up to and including half-time. */
+  firstHalfEvents: number;
+}
+
 /** A pending user match: first half played, waiting on half-time. */
 export interface PendingPlay {
   readonly pending: PendingMatchday;
@@ -71,6 +89,7 @@ export class Career {
   private open: PendingPlay | undefined;
   private readonly userClubId: string;
   private lastOutcome: MatchdayOutcome | undefined;
+  private watched: WatchedMatch | undefined;
 
   constructor(
     readonly setup: SeasonSetup,
@@ -100,24 +119,50 @@ export class Career {
   // -------------------------------------------------------------- decisions
 
   apply(decision: Decision): void {
-    if (this.open) throw new Error('finish the match in progress first');
+    if (this.open && decision.type !== 'halftime') {
+      throw new Error('finish the match in progress first');
+    }
     switch (decision.type) {
-      case 'lineup': {
-        const squad = new Set(this.season.squadOf(this.userClubId).map((p) => p.id));
-        if (!decision.starters.every((id) => squad.has(id))) {
-          throw new Error('every starter must belong to the squad');
-        }
-        this.season.setUserLineup({
-          formation: decision.formation,
-          starters: decision.starters,
-          tactic: decision.tactic,
-        });
+      case 'lineup':
+        this.setLineup(decision);
+        break;
+      case 'kickoff': {
+        this.requirePhase('matchday');
+        this.setLineup(decision);
+        const pending = this.season.beginMatchday();
+        this.open = { pending, user: pending.user! };
         break;
       }
-      case 'play': {
-        const play = this.beginPlay();
-        this.completePlay(decision.halfTime, play);
-        return;
+      case 'halftime': {
+        const play = this.open;
+        if (!play) throw new Error('no match in progress');
+        const club = this.userClubId;
+        const changes: SideChanges = {
+          ...(decision.tactic ? { tactic: decision.tactic } : {}),
+          ...(decision.substitutions?.length
+            ? {
+                substitutions: decision.substitutions.map((sub) => ({
+                  off: seasonPlayerId(club, sub.off),
+                  on: seasonPlayerId(club, sub.on),
+                })),
+              }
+            : {}),
+        };
+        const round = this.season.round;
+        // The snapshot's event list is live; count the first half before the second is played.
+        const firstHalfEvents = play.user.snapshot.events.length;
+        this.lastOutcome = play.pending.finish(changes);
+        this.open = undefined;
+        this.watched = {
+          round,
+          fixture: play.user.fixture,
+          home: play.user.home,
+          away: play.user.away,
+          userSide: play.user.userSide,
+          result: this.lastOutcome.userMatch!.result,
+          firstHalfEvents,
+        };
+        break;
       }
       case 'sim': {
         this.requirePhase('matchday');
@@ -142,45 +187,38 @@ export class Career {
     this.decisions.push(decision);
   }
 
-  /** Start the next match for viewing: first half is played, half-time is the user's move. */
-  beginPlay(): PendingPlay {
-    this.requirePhase('matchday');
-    if (this.open) throw new Error('a match is already in progress');
-    const pending = this.season.beginMatchday();
-    const user = pending.user!;
-    this.open = { pending, user };
-    return this.open;
+  private setLineup(decision: { formation: string; starters: string[]; tactic: Tactic }): void {
+    const squad = new Set(this.season.squadOf(this.userClubId).map((p) => p.id));
+    if (!decision.starters.every((id) => squad.has(id))) {
+      throw new Error('every starter must belong to the squad');
+    }
+    this.season.setUserLineup({
+      formation: decision.formation,
+      starters: decision.starters,
+      tactic: decision.tactic,
+    });
   }
 
-  /** Finish the match begun with `beginPlay` and log it; half-time ids are raw squad ids. */
-  completePlay(halfTime?: HalfTimeDecision, play: PendingPlay | undefined = this.open): void {
-    if (!play || play !== this.open) throw new Error('no match in progress');
-    const club = this.userClubId;
-    const changes: SideChanges | undefined = halfTime
-      ? {
-          ...(halfTime.tactic ? { tactic: halfTime.tactic } : {}),
-          ...(halfTime.substitutions?.length
-            ? {
-                substitutions: halfTime.substitutions.map((s) => ({
-                  off: seasonPlayerId(club, s.off),
-                  on: seasonPlayerId(club, s.on),
-                })),
-              }
-            : {}),
-        }
-      : undefined;
-    this.lastOutcome = play.pending.finish(changes);
-    this.open = undefined;
-    this.decisions.push(halfTime ? { type: 'play', halfTime } : { type: 'play' });
+  /** Kick off the next match with this lineup (logged now) and play the first half. */
+  kickOff(lineup: UserLineup): PendingPlay {
+    this.apply({ type: 'kickoff', ...lineup, starters: [...lineup.starters] });
+    return this.open!;
   }
 
-  /**
-   * Drop a match that was begun but not finished. It was never logged, and beginning it again
-   * replays the same first half from the same seed.
-   */
-  abandonPlay(): void {
-    this.open = undefined;
-    this.season.abandonMatchday();
+  /** Log half-time changes and play the second half. */
+  halfTime(changes: HalfTimeDecision = {}): void {
+    this.apply({ type: 'halftime', ...changes });
+  }
+
+  /** Kick off and decide the match at once, with no half-time changes (instant mode). */
+  playInstant(lineup: UserLineup): void {
+    this.kickOff(lineup);
+    this.halfTime();
+  }
+
+  /** The user's most recent match played through kick-off and half-time, with its full result. */
+  get lastWatched(): WatchedMatch | undefined {
+    return this.watched;
   }
 
   get inProgress(): PendingPlay | undefined {

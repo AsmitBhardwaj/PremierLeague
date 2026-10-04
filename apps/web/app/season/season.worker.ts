@@ -2,6 +2,7 @@
 
 import {
   Career,
+  type Tactic,
   cacheOf,
   hashSeed,
   parseCareerSave,
@@ -9,7 +10,6 @@ import {
   replayCareer,
   type CareerSave,
   type Decision,
-  type PendingPlay,
   type SeasonPrediction,
 } from '@pl/engine';
 import playerData from '../play/data/players.json';
@@ -40,17 +40,58 @@ interface Meta {
   prediction: SeasonPrediction;
   seed: number;
   dataVersion: string;
+  /** Round of the last watched match whose result has been shown. */
+  revealed: number;
 }
 
 let career: Career | null = null;
 let meta: Meta | null = null;
-let play: PendingPlay | null = null;
 
 const marketById = new Map(market.map((p) => [p.id, p]));
 const squadOf = (ids: readonly string[]): MarketPlayer[] | null => {
   const squad = ids.map((id) => marketById.get(id));
   return squad.every(Boolean) ? (squad as MarketPlayer[]) : null;
 };
+
+const matchStartOf = (c: Career): MatchStart => {
+  const { user } = c.inProgress!;
+  return {
+    home: user.home,
+    away: user.away,
+    userSide: user.userSide,
+    events: user.snapshot.events.slice(),
+    snapshot: { ...user.snapshot, events: [] },
+    seed: hashSeed(c.season.seed, c.round, user.fixture.home, user.fixture.away) >>> 0,
+    round: c.round,
+  };
+};
+
+const finishOf = (c: Career): MatchFinish => {
+  const w = c.lastWatched!;
+  return {
+    result: w.result,
+    userSide: w.userSide,
+    home: w.home,
+    away: w.away,
+    seed: hashSeed(c.season.seed, w.round, w.fixture.home, w.fixture.away) >>> 0,
+    round: w.round,
+  };
+};
+
+/** Where playback picks up after a refresh: never at a decision that is already logged. */
+function buildResume(): SeasonView['resume'] {
+  if (!career || !meta) return null;
+  if (career.inProgress) return { kind: 'first_half', start: matchStartOf(career) };
+  const watched = career.lastWatched;
+  if (watched && watched.round === career.round - 1 && watched.round > meta.revealed) {
+    return {
+      kind: 'second_half',
+      finish: finishOf(career),
+      firstHalfEvents: watched.firstHalfEvents,
+    };
+  }
+  return null;
+}
 
 function buildView(): SeasonView {
   if (!career || !meta) throw new Error('no season loaded');
@@ -80,7 +121,7 @@ function buildView(): SeasonView {
     .matchRecords()
     .filter((r) => r.home === USER_CLUB_ID || r.away === USER_CLUB_ID);
   const save: CareerSave<ClubIdentity, SeasonPrediction> = {
-    version: 1,
+    version: 2,
     seed: meta.seed,
     dataVersion: meta.dataVersion,
     identity: meta.identity,
@@ -88,6 +129,7 @@ function buildView(): SeasonView {
     squadIds: meta.squadIds,
     prediction: meta.prediction,
     decisions: career.decisions as Decision[],
+    revealed: meta.revealed,
     cache: cacheOf(career),
   };
   return {
@@ -103,6 +145,7 @@ function buildView(): SeasonView {
     identity: meta.identity,
     replacedClubId: meta.replacedClubId,
     squadIds: meta.squadIds,
+    resume: buildResume(),
     save,
   };
 }
@@ -135,7 +178,6 @@ function create(request: Extract<SeasonMessage, { kind: 'create' }>): void {
     },
   );
   career = next;
-  play = null;
   meta = {
     identity: request.identity,
     replacedClubId: replaced.id,
@@ -143,6 +185,7 @@ function create(request: Extract<SeasonMessage, { kind: 'create' }>): void {
     prediction,
     seed: request.seed,
     dataVersion: marketDataVersion(market),
+    revealed: -1,
   };
 }
 
@@ -167,7 +210,6 @@ function resume(raw: unknown): void {
     );
   }
   career = result.career;
-  play = null;
   meta = {
     identity,
     replacedClubId: save.replacedClubId,
@@ -175,11 +217,9 @@ function resume(raw: unknown): void {
     prediction: save.prediction as SeasonPrediction,
     seed: save.seed,
     dataVersion: save.dataVersion,
+    revealed: save.revealed,
   };
 }
-
-const matchSeedOf = (c: Career, home: string, away: string): number =>
-  hashSeed(c.season.seed, c.round, home, away) >>> 0;
 
 function handle(message: SeasonMessage): Omit<Extract<SeasonResponse, { ok: true }>, 'id' | 'ms'> {
   let start: MatchStart | undefined;
@@ -192,48 +232,26 @@ function handle(message: SeasonMessage): Omit<Extract<SeasonResponse, { ok: true
       resume(message.save);
       break;
     default: {
-      if (!career) throw new Error('No season is loaded.');
+      if (!career || !meta) throw new Error('No season is loaded.');
+      const lineup = (m: { formation: string; starters: string[]; tactic: Tactic }) => ({
+        formation: m.formation,
+        starters: m.starters,
+        tactic: m.tactic,
+      });
       if (message.kind === 'lineup') {
-        career.apply({
-          type: 'lineup',
-          formation: message.formation,
-          starters: message.starters,
-          tactic: message.tactic,
-        });
-      } else if (message.kind === 'begin') {
-        if (play) career.abandonPlay();
-        play = career.beginPlay();
-        const { user } = play;
-        start = {
-          home: user.home,
-          away: user.away,
-          userSide: user.userSide,
-          events: user.snapshot.events.slice(),
-          snapshot: { ...user.snapshot, events: [] },
-          seed: matchSeedOf(career, user.fixture.home, user.fixture.away),
-          round: career.round,
-        };
-      } else if (message.kind === 'finish') {
-        if (!play) throw new Error('No match is in progress.');
-        const { user } = play;
-        const round = career.round;
-        career.completePlay(message.halfTime, play);
-        play = null;
-        const outcome = career.lastMatchday!.userMatch!;
-        finish = {
-          result: outcome.result,
-          userSide: user.userSide,
-          home: user.home,
-          away: user.away,
-          seed: hashSeed(career.season.seed, round, user.fixture.home, user.fixture.away) >>> 0,
-          round,
-        };
-      } else if (message.kind === 'abandon') {
-        if (play) career.abandonPlay();
-        play = null;
+        career.apply({ type: 'lineup', ...lineup(message) });
+      } else if (message.kind === 'kickoff') {
+        career.kickOff(lineup(message));
+        start = matchStartOf(career);
+      } else if (message.kind === 'halftime') {
+        career.halfTime(message.changes);
+        finish = finishOf(career);
+      } else if (message.kind === 'instant') {
+        career.playInstant(lineup(message));
+        finish = finishOf(career);
+      } else if (message.kind === 'ack') {
+        if (career.lastWatched) meta.revealed = Math.max(meta.revealed, career.lastWatched.round);
       } else if (message.kind === 'sim') {
-        if (play) career.abandonPlay();
-        play = null;
         career.apply({ type: 'sim', to: message.to });
       } else if (message.kind === 'closeWindow') {
         career.apply({ type: 'closeWindow' });

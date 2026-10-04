@@ -517,11 +517,6 @@ export class Season {
     return handle;
   }
 
-  /** Forget a matchday begun but not finished; nothing was recorded. */
-  abandonMatchday(): void {
-    this.pending = undefined;
-  }
-
   /** The side a club would field against the user's club now (without the user's players). */
   opponentPreview(clubId: string): Team {
     const club = this.clubs.get(clubId);

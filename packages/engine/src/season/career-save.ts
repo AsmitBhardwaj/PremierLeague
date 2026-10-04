@@ -41,7 +41,8 @@ export interface CareerCache {
  * the caller's own JSON (club name and colours, the pre-season prediction).
  */
 export interface CareerSave<Identity = unknown, Prediction = unknown> {
-  version: 1;
+  /** 2: decisions are logged when the simulation uses them (`kickoff`, `halftime`). */
+  version: 2;
   seed: number;
   dataVersion: string;
   identity: Identity;
@@ -50,6 +51,11 @@ export interface CareerSave<Identity = unknown, Prediction = unknown> {
   squadIds: string[];
   prediction: Prediction;
   decisions: Decision[];
+  /**
+   * Round of the last watched match whose result the person has been shown. A watched match
+   * decided in the log but past this round resumes at playback, never at its decisions.
+   */
+  revealed: number;
   cache: CareerCache;
 }
 
@@ -80,19 +86,22 @@ export function isDecision(v: unknown): v is Decision {
         v.starters.length === 11 &&
         TACTICS.includes(v.tactic as string)
       );
-    case 'play': {
-      if (v.halfTime === undefined) return true;
-      const h = v.halfTime;
-      if (!isRecord(h)) return false;
-      if (h.tactic !== undefined && !TACTICS.includes(h.tactic as string)) return false;
+    case 'kickoff':
       return (
-        h.substitutions === undefined ||
-        (Array.isArray(h.substitutions) &&
-          h.substitutions.every(
+        typeof v.formation === 'string' &&
+        isStrings(v.starters) &&
+        v.starters.length === 11 &&
+        TACTICS.includes(v.tactic as string)
+      );
+    case 'halftime':
+      if (v.tactic !== undefined && !TACTICS.includes(v.tactic as string)) return false;
+      return (
+        v.substitutions === undefined ||
+        (Array.isArray(v.substitutions) &&
+          v.substitutions.every(
             (s) => isRecord(s) && typeof s.off === 'string' && typeof s.on === 'string',
           ))
       );
-    }
     case 'sim':
       return v.to === 'next' || v.to === 'january' || v.to === 'end';
     case 'transfer':
@@ -104,9 +113,10 @@ export function isDecision(v: unknown): v is Decision {
   }
 }
 
-/** Structural check of untrusted JSON. Returns null for anything that is not a version-1 save. */
+/** Structural check of untrusted JSON. Returns null for anything that is not a version-2 save. */
 export function parseCareerSave(raw: unknown): CareerSave | null {
-  if (!isRecord(raw) || raw.version !== 1) return null;
+  if (!isRecord(raw) || raw.version !== 2) return null;
+  if (typeof raw.revealed !== 'number' || !Number.isInteger(raw.revealed)) return null;
   if (typeof raw.seed !== 'number' || !Number.isInteger(raw.seed)) return null;
   if (typeof raw.dataVersion !== 'string' || typeof raw.replacedClubId !== 'string') return null;
   if (!isStrings(raw.squadIds) || !Array.isArray(raw.decisions)) return null;

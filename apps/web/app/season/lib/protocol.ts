@@ -53,6 +53,15 @@ export interface SeasonView {
   identity: ClubIdentity;
   replacedClubId: string;
   squadIds: string[];
+  /**
+   * A match already decided in the log: playback resumes here and never returns to decisions.
+   * `first_half`: kicked off, half-time still to decide. `second_half`: the result is fixed, only
+   * its playback was cut short.
+   */
+  resume:
+    | { kind: 'first_half'; start: MatchStart }
+    | { kind: 'second_half'; finish: MatchFinish; firstHalfEvents: number }
+    | null;
   save: CareerSave<ClubIdentity, SeasonPrediction>;
 }
 
@@ -88,9 +97,14 @@ export type SeasonRequest =
     }
   | { kind: 'resume'; save: unknown }
   | { kind: 'lineup'; formation: Formation; starters: string[]; tactic: Tactic }
-  | { kind: 'begin' }
-  | { kind: 'finish'; halfTime?: HalfTimeDecision }
-  | { kind: 'abandon' }
+  /** Log the XI, formation and tactic and play the first half. */
+  | { kind: 'kickoff'; formation: Formation; starters: string[]; tactic: Tactic }
+  /** Log half-time changes and play the second half; the match is then decided. */
+  | { kind: 'halftime'; changes?: HalfTimeDecision }
+  /** Kick off and decide in one step (instant result). */
+  | { kind: 'instant'; formation: Formation; starters: string[]; tactic: Tactic }
+  /** The person has been shown the last watched result. */
+  | { kind: 'ack' }
   | { kind: 'sim'; to: 'next' | 'january' | 'end' }
   | { kind: 'closeWindow' };
 

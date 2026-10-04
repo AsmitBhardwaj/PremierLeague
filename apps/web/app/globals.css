@@ -1584,7 +1584,7 @@ h3,
 }
 
 .player-rating,
-.player-price {
+.player-value {
   font-family: var(--display);
   font-weight: 600;
   text-align: right;

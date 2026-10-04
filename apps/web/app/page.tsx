@@ -8,6 +8,7 @@ import {
   POSITION_QUOTAS,
   SQUAD_BUDGET,
   SQUAD_SIZE,
+  formatMoney,
 } from './play/lib/squad';
 
 export const dynamic = 'force-static';
@@ -25,7 +26,7 @@ const modalPointsBin = samplePrediction.pointsDistribution.reduce((best, bin) =>
   bin.probability > best.probability ? bin : best,
 ).min;
 
-const money = (units: number): string => `£${(units / 10).toFixed(1)}m`;
+const money = formatMoney;
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
 const ordinal = (position: number): string => {
   const mod100 = position % 100;
@@ -52,7 +53,7 @@ const careerSteps = [
   },
   {
     title: 'Sign your squad',
-    text: `Real players, real prices, ${money(SQUAD_BUDGET)} to spend.`,
+    text: `Real players at their market value, ${money(SQUAD_BUDGET)} to spend.`,
     accent: 'def',
   },
   {
@@ -328,7 +329,7 @@ export default function Home() {
               <span>Your transfer budget</span>
               <div>
                 <strong>{money(SQUAD_BUDGET)}</strong>
-                <p>Spend it on real players at their current prices.</p>
+                <p>Spend it on real players at their market value.</p>
                 <i className="budget-bar" aria-hidden="true" />
               </div>
             </div>

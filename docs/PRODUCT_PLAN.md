@@ -28,7 +28,7 @@ You found a brand-new football club that enters the Premier League in place of o
 
 This is the agreed flow from the design mockup:
 
-1. **Build squad** — player market with prices; budget bar; formation slots (GK/DEF/MID/FWD); max **3 players per real club**; "Continue" only when the squad is valid.
+1. **Build squad** — player market with values; budget bar; formation slots (GK/DEF/MID/FWD); max **3 players per real club**; "Continue" only when the squad is valid.
 2. **Pick your team** — **pitch with the XI on the left**, substitutes row under the pitch, **selected player's info panel on the right** (overall rating, position, six-stat radar chart, fitness, form, positions, preferred foot, stat bars). Click a starter, then a same-position substitute, to swap. Tabs: **Team / Tactics**. Fixture card with win/draw/loss odds and **Kick off** always visible.
 3. **Watch the match** — 2D top-down pitch, players as dots, ball moves, scoreboard + clock, event banners (goal, chance, card), live commentary feed. **A full match plays back in ~20 seconds max.** Viewing options: highlights / text commentary / instant result. "Skip to full time" always available.
 4. **League table** — updated table with your club highlighted, movement arrows, result card, player of the match, updated predicted finish, **Next match**.
@@ -50,7 +50,11 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 ### Approved Phase 3 squad rules
 
 - Squad size: exactly 18 players — 2 goalkeepers, 6 defenders, 6 midfielders and 4 forwards.
-- Budget: 950 FPL price units (£95.0m), using the existing FPL prices.
+- Budget: **£250m**, in our own market valuations. Values are our own estimates derived from FPL prices and engine ratings, not official or third-party transfer values, and FPL prices are never shown to the user.
+  - **Valuation model** (`packages/engine/src/market-value.ts`, generated into the browser player dataset by `generate-web-player-data`; not used by the match simulation). Within each position a player's quality is a blend of two within-position percentiles, **40% FPL price and 60% engine overall**, ranked into a strict quality percentile (ties break on overall, then price, then id). A per-position convex curve turns that percentile into a value, rounded to 0.1m under £10m, 0.5m from £10m to £50m and £1m above. The best player of each position reaches its ceiling: GK £55m, DEF £90m, MID and FWD £175m. At equal quality a defender never costs more than a midfielder or forward, nor a goalkeeper more than a defender.
+  - **Distribution targets** across the eligible pool: £100m+ 6–10 players (midfielders and forwards only, spread across several clubs); £50–100m 30–50; £20–50m 120–180; £3–20m the rest of the regulars; £3m and under at least 15 per position. Current counts are 8 / 32 / 128 / 222 / 172, with 37 goalkeepers, 59 defenders, 57 midfielders and 19 forwards at £3m or under.
+  - **Balance targets** at £250m, measured with real `predictSeason` runs and re-checked by `valuation.test.ts` and `budget-sweep.test.ts`: any single player, including the most expensive, fits with the cheapest legal completion of the squad (hard rule); the cheapest legal squad leaves most of the budget unspent; a balanced build (spending spread evenly by position) has a most likely finish of 8th–12th; the best build from a simple optimiser (greedy by rating per unit spent, then local swaps) finishes 4th–7th with a title chance under 15% and spends at least 95% of the budget; two £100m+ players can fit (with an otherwise near-minimum squad) but three cannot.
+  - The curves were fitted so these targets hold at exactly £250m. Finish is very sensitive to the budget (about £25m moves the balanced build by several places), so changing the budget, the ratings or the curves means re-running the sweep.
 - Maximum three players from any real club.
 - Exclude only players whose FPL status is `u`; players with status `a`, `d`, `i` or `s` remain selectable.
 - The starting XI must use one of the six engine-supported formations: 4-4-2, 4-3-3, 3-5-2, 5-3-2, 4-5-1 or 3-4-3.
@@ -200,6 +204,8 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 **Phase 4 — Match viewer.** 2D renderer that **plays back the engine's event timeline** (it never decides outcomes itself); ~20s per match; highlights / commentary / instant; half-time subs and tactic change; pick-your-team screen as described in §3.
 
 **Phase 5 — Season loop.** Fixtures, league table after every matchday, injuries, form, fitness, January window, save/resume.
+
+- Availability-based pricing (discounting injured or suspended players) is deferred until injuries actually remove players from matches; adding it before then creates an exploit.
 
 **Phase 6 — Accounts and competition.** Supabase auth, saved clubs, leaderboards (seed-verified on the server), friends leagues, weekly challenges.
 

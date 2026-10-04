@@ -1,7 +1,14 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { overall, rateAll, toRatingInputs, type FplElementRaw } from '@pl/engine';
+import {
+  marketValues,
+  overall,
+  rateAll,
+  toRatingInputs,
+  type FplElementRaw,
+  type ValuationInput,
+} from '@pl/engine';
 import { loadFplCache } from './lib/fpl-cache';
 
 interface PricedElement extends FplElementRaw {
@@ -13,22 +20,35 @@ const teams = new Map(bootstrap.teams.map((team) => [team.id, team]));
 const elements = new Map(
   bootstrap.elements.map((element) => [element.id, element as PricedElement]),
 );
-const players = rateAll(toRatingInputs(bootstrap, summaries))
-  .filter(({ input }) => input.status !== 'u')
+const rated = rateAll(toRatingInputs(bootstrap, summaries)).filter(
+  ({ input }) => input.status !== 'u',
+);
+const pool: ValuationInput[] = rated.map(({ input, player }) => {
+  const source = elements.get(input.id);
+  const fplPrice = Number(source?.now_cost);
+  if (!source || !Number.isInteger(fplPrice) || fplPrice <= 0) {
+    throw new Error(`Invalid price for ${player.name}`);
+  }
+  return {
+    id: player.id,
+    position: player.position,
+    fplPrice,
+    overall: Math.round(overall(player.position, player.ratings)),
+  };
+});
+// Our own valuations (tenths of £m). FPL prices only feed this model; they are not written to the
+// browser dataset.
+const values = marketValues(pool);
+const players = rated
   .map(({ input, player }) => {
-    const source = elements.get(input.id);
     const club = teams.get(input.clubId);
-    if (!source || !club) throw new Error(`Missing FPL metadata for player ${input.id}`);
-    const price = Number(source.now_cost);
-    if (!Number.isInteger(price) || price <= 0) {
-      throw new Error(`Invalid price for ${player.name}`);
-    }
+    if (!club) throw new Error(`Missing FPL metadata for player ${input.id}`);
     return {
       ...player,
       clubId: String(club.id),
       clubName: club.name,
       clubShortName: club.short_name,
-      price,
+      value: values.get(player.id)!,
       status: input.status,
       overall: Math.round(overall(player.position, player.ratings)),
     };

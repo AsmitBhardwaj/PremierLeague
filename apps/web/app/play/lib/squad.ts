@@ -1,6 +1,11 @@
 import type { Player, Position, Team } from '@pl/engine';
 
-export const SQUAD_BUDGET = 950;
+/** Budget in tenths of £m (our own valuations): £250.0m. */
+export const SQUAD_BUDGET = 2500;
+
+/** Tenths of £m as a display string: whole millions stay whole, e.g. £175m, £12.5m, £0.9m. */
+export const formatMoney = (units: number): string =>
+  `£${units % 10 === 0 ? String(units / 10) : (units / 10).toFixed(1)}m`;
 export const SQUAD_SIZE = 18;
 export const MAX_PER_REAL_CLUB = 3;
 export const POSITION_QUOTAS: Record<Position, number> = {
@@ -24,7 +29,8 @@ export interface MarketPlayer extends Player {
   clubId: string;
   clubName: string;
   clubShortName: string;
-  price: number;
+  /** Our market value in tenths of £m (not an official or third-party figure). */
+  value: number;
   status: string;
   overall: number;
 }
@@ -47,7 +53,7 @@ const countBy = (players: readonly MarketPlayer[], value: (player: MarketPlayer)
 };
 
 export const squadCost = (players: readonly MarketPlayer[]): number =>
-  players.reduce((sum, player) => sum + player.price, 0);
+  players.reduce((sum, player) => sum + player.value, 0);
 
 export const positionCounts = (players: readonly MarketPlayer[]): Record<Position, number> => {
   const counts: Record<Position, number> = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
@@ -60,7 +66,8 @@ export function validateSquad(players: readonly MarketPlayer[]): string[] {
   const unique = new Set(players.map((player) => player.id));
   if (unique.size !== players.length) errors.push('A player can only be selected once.');
   if (players.length !== SQUAD_SIZE) errors.push(`Select exactly ${SQUAD_SIZE} players.`);
-  if (squadCost(players) > SQUAD_BUDGET) errors.push('The squad is over the £95.0m budget.');
+  if (squadCost(players) > SQUAD_BUDGET)
+    errors.push(`The squad is over the ${formatMoney(SQUAD_BUDGET)} budget.`);
   const positions = positionCounts(players);
   for (const position of POSITION_ORDER) {
     if (positions[position] !== POSITION_QUOTAS[position]) {
@@ -112,7 +119,7 @@ export function cheapestLegalCompletion(
     const pools = POSITION_ORDER.map((position) =>
       clubPlayers
         .filter((player) => player.position === position)
-        .sort((a, b) => a.price - b.price || a.id.localeCompare(b.id)),
+        .sort((a, b) => a.value - b.value || a.id.localeCompare(b.id)),
     );
     const options: { counts: number[]; cost: number; playerIds: string[] }[] = [];
     for (let gk = 0; gk <= Math.min(capacity, required[0]!, pools[0]!.length); gk++) {
@@ -131,7 +138,7 @@ export function cheapestLegalCompletion(
             const chosen = counts.flatMap((count, index) => pools[index]!.slice(0, count));
             options.push({
               counts,
-              cost: chosen.reduce((sum, player) => sum + player.price, 0),
+              cost: chosen.reduce((sum, player) => sum + player.value, 0),
               playerIds: chosen.map((player) => player.id),
             });
           }
@@ -180,7 +187,10 @@ export function assessSelection(
   const next = [...selected, player];
   const currentCost = squadCost(next);
   if (currentCost > SQUAD_BUDGET) {
-    return { allowed: false, message: `${player.name} would take the squad over £95.0m.` };
+    return {
+      allowed: false,
+      message: `${player.name} would take the squad over ${formatMoney(SQUAD_BUDGET)}.`,
+    };
   }
   const completion = cheapestLegalCompletion(next, market);
   if (!completion) {
@@ -193,9 +203,9 @@ export function assessSelection(
   if (minimumFinalCost > SQUAD_BUDGET) {
     return {
       allowed: false,
-      message: `${player.name} would leave too little budget. The cheapest legal completion would cost £${(
-        minimumFinalCost / 10
-      ).toFixed(1)}m in total.`,
+      message: `${player.name} would leave too little budget. The cheapest legal completion would cost ${formatMoney(
+        minimumFinalCost,
+      )} in total.`,
       minimumFinalCost,
     };
   }

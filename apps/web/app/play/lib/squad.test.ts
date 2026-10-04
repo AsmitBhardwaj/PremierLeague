@@ -38,13 +38,13 @@ describe('complete roster validation', () => {
 });
 
 describe('selection constraints', () => {
-  it('enforces the 950-unit budget', () => {
+  it('enforces the £250m budget', () => {
     const squad = cheapestSquad().map((player, index) =>
-      index === 0 ? { ...player, price: SQUAD_BUDGET } : player,
+      index === 0 ? { ...player, value: SQUAD_BUDGET } : player,
     );
-    expect(validateSquad(squad)).toContain('The squad is over the £95.0m budget.');
-    expect(assessSelection({ ...market[0]!, price: 951 }, [], market).message).toMatch(
-      /over £95\.0m/,
+    expect(validateSquad(squad)).toContain('The squad is over the £250m budget.');
+    expect(assessSelection({ ...market[0]!, value: SQUAD_BUDGET + 1 }, [], market).message).toMatch(
+      /over £250m/,
     );
   });
 
@@ -86,12 +86,12 @@ describe('cheapest legal completion', () => {
     const completion = cheapestLegalCompletion([], market);
     expect(completion).not.toBeNull();
     const squad = completion!.playerIds.map((id) => market.find((player) => player.id === id)!);
-    expect(completion!.cost).toBe(squad.reduce((sum, player) => sum + player.price, 0));
+    expect(completion!.cost).toBe(squad.reduce((sum, player) => sum + player.value, 0));
     expect(validateSquad(squad)).toEqual([]);
   });
 
   it('rejects a selection whose cheapest legal completion exceeds the budget', () => {
-    const inflated = market.map((player) => ({ ...player, price: 100 }));
+    const inflated = market.map((player) => ({ ...player, value: 200 }));
     expect(assessSelection(inflated[0]!, [], inflated).message).toMatch(
       /cheapest legal completion/,
     );

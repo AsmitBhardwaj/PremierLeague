@@ -12,6 +12,7 @@ import {
   POSITION_ORDER,
   POSITION_QUOTAS,
   SQUAD_BUDGET,
+  formatMoney,
   assessSelection,
   cheapestLegalCompletion,
   createPredictionTeam,
@@ -48,7 +49,7 @@ const stepNames: Record<Step, string> = {
   prediction: 'Prediction',
 };
 
-const money = (units: number) => `£${(units / 10).toFixed(1)}m`;
+const money = formatMoney;
 const pct = (value: number) => `${(value * 100).toFixed(value > 0 && value < 0.01 ? 1 : 0)}%`;
 const ordinal = (position: number) => {
   const mod100 = position % 100;
@@ -250,7 +251,7 @@ function SquadStep({
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState('ALL');
   const [club, setClub] = useState('ALL');
-  const [sort, setSort] = useState('price-asc');
+  const [sort, setSort] = useState('value-asc');
   const [message, setMessage] = useState('');
   const selectedIds = useMemo(() => new Set(selected.map((player) => player.id)), [selected]);
   const counts = positionCounts(selected);
@@ -276,10 +277,10 @@ function SquadStep({
           (club === 'ALL' || player.clubName === club),
       )
       .sort((a, b) => {
-        if (sort === 'price-desc') return b.price - a.price || a.name.localeCompare(b.name);
+        if (sort === 'value-desc') return b.value - a.value || a.name.localeCompare(b.name);
         if (sort === 'rating-desc') return b.overall - a.overall || a.name.localeCompare(b.name);
         if (sort === 'name') return a.name.localeCompare(b.name);
-        return a.price - b.price || a.name.localeCompare(b.name);
+        return a.value - b.value || a.name.localeCompare(b.name);
       });
   }, [club, position, search, sort]);
 
@@ -301,7 +302,7 @@ function SquadStep({
     if (counts[player.position] >= POSITION_QUOTAS[player.position])
       return `${player.position} full`;
     if (selected.filter((item) => item.clubId === player.clubId).length >= 3) return 'Club limit';
-    if (cost + player.price > SQUAD_BUDGET) return 'Over budget';
+    if (cost + player.value > SQUAD_BUDGET) return 'Over budget';
     return '';
   };
 
@@ -374,8 +375,8 @@ function SquadStep({
             <label className="field">
               <span>Sort</span>
               <select value={sort} onChange={(event) => setSort(event.target.value)}>
-                <option value="price-asc">Price: low to high</option>
-                <option value="price-desc">Price: high to low</option>
+                <option value="value-asc">Value: low to high</option>
+                <option value="value-desc">Value: high to low</option>
                 <option value="rating-desc">Rating: high to low</option>
                 <option value="name">Name</option>
               </select>
@@ -400,7 +401,7 @@ function SquadStep({
                     </small>
                   </span>
                   <span className="player-rating">{player.overall}</span>
-                  <span className="player-price">{money(player.price)}</span>
+                  <span className="player-value">{money(player.value)}</span>
                   <button
                     type="button"
                     className={`row-action ${block && !selectedIds.has(player.id) ? 'blocked' : ''}`}
@@ -443,7 +444,7 @@ function SquadStep({
                   <button key={player.id} type="button" onClick={() => remove(player)}>
                     <span>{player.name}</span>
                     <small>{player.clubShortName}</small>
-                    <strong>{money(player.price)}</strong>
+                    <strong>{money(player.value)}</strong>
                     <span aria-hidden="true">×</span>
                   </button>
                 ))}
@@ -616,7 +617,7 @@ function LineupStep({
               </div>
               <h2>{inspectedPlayer.name}</h2>
               <p className="player-detail-meta">
-                {inspectedPlayer.clubName} · {money(inspectedPlayer.price)} ·{' '}
+                {inspectedPlayer.clubName} · {money(inspectedPlayer.value)} ·{' '}
                 {statusLabel(inspectedPlayer.status)}
               </p>
               <div className="rating-bars" aria-label={`${inspectedPlayer.name} engine ratings`}>

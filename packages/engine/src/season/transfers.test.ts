@@ -4,6 +4,7 @@ import type { Player, Position } from '../types';
 import {
   Career,
   MAX_TRANSFERS,
+  MIN_AWARD_APPEARANCES,
   cacheOf,
   computeDataVersion,
   replayCareer,
@@ -279,4 +280,52 @@ describe('January window transfers', () => {
     career.apply({ type: 'transfer', out: out.id, in: hurt.p.id });
     expect(career.season.outFor('USER', hurt.p.id)).toBe(career.season.outFor(hurt.id, hurt.p.id));
   });
+});
+
+describe('season awards', () => {
+  const finish = (seed: number, swap: boolean): Career => {
+    const career = atWindow(seed);
+    if (swap) {
+      career.apply({
+        type: 'transfer',
+        out: mine(career, 'FWD').id,
+        in: candidate(career, 'FWD', [], 6).player.id,
+      });
+    }
+    career.apply({ type: 'closeWindow' });
+    career.apply({ type: 'sim', to: 'end' });
+    return career;
+  };
+
+  it('pick the league-wide top scorer and player of the season from the match ratings', () => {
+    const career = finish(5, false);
+    const awards = career.awards();
+    const stats = career.season.playerStats();
+    const goals = new Map<string, number>();
+    for (const s of stats) goals.set(s.playerId, (goals.get(s.playerId) ?? 0) + s.goals);
+    expect(awards.topScorer!.goals).toBe(Math.max(...goals.values()));
+    expect(awards.topScorer!.goals).toBeGreaterThan(0);
+    expect(awards.playerOfSeason!.appearances).toBeGreaterThanOrEqual(MIN_AWARD_APPEARANCES);
+    expect(awards.playerOfSeason!.averageRating).toBeGreaterThan(6);
+  }, 60_000);
+
+  it("pick the user's own top scorer and best player from his own squad", () => {
+    const career = finish(5, false);
+    const awards = career.awards();
+    const squad = new Set(career.squad().map((p) => p.id));
+    expect(awards.userBestPlayer).not.toBeNull();
+    expect(squad.has(awards.userBestPlayer!.playerId)).toBe(true);
+    expect(awards.userBestPlayer!.clubId).toBe('USER');
+    if (awards.userTopScorer) expect(squad.has(awards.userTopScorer.playerId)).toBe(true);
+  }, 60_000);
+
+  it('keep what a sold player did for the club and are deterministic', () => {
+    const a = finish(7, true);
+    const b = finish(7, true);
+    expect(a.awards()).toEqual(b.awards());
+    const soldLines = a.season
+      .playerStats()
+      .filter((s) => s.clubId === 'USER' && !a.squad().some((p) => p.id === s.playerId));
+    expect(soldLines.length).toBeGreaterThan(0);
+  }, 120_000);
 });

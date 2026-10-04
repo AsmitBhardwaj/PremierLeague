@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { movement, ordinal, resultLetter, userPosition } from './format';
+import {
+  movement,
+  ordinal,
+  placesSummary,
+  predictedPosition,
+  resultLetter,
+  userPosition,
+} from './format';
 import type { TableEntry } from './protocol';
 
 const row = (clubId: string, previousPosition: number): TableEntry => ({
@@ -45,5 +52,23 @@ describe('season formatting', () => {
     expect(resultLetter({ round: 1, home: 'A', away: 'USER', homeGoals: 0, awayGoals: 3 })).toBe(
       'W',
     );
+  });
+
+  it('summarises the finish against the prediction', () => {
+    expect(placesSummary(11, 7)).toBe('Predicted 11th, finished 7th: +4 places');
+    expect(placesSummary(5, 6)).toBe('Predicted 5th, finished 6th: −1 place');
+    expect(placesSummary(9, 9)).toBe('Predicted 9th, finished 9th: exactly as predicted');
+  });
+
+  it('reads the most likely predicted position', () => {
+    expect(
+      predictedPosition({
+        positionDistribution: [
+          { position: 1, probability: 0.1 },
+          { position: 2, probability: 0.4 },
+          { position: 3, probability: 0.3 },
+        ],
+      }),
+    ).toBe(2);
   });
 });

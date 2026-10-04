@@ -8,6 +8,7 @@ import type {
   Phase,
   PlayerView,
   Projection,
+  SeasonAwards,
   SeasonPrediction,
   Side,
   Tactic,
@@ -47,6 +48,8 @@ export interface SeasonView {
   squad: PlayerView[];
   lineup: UserLineup;
   projection: Projection;
+  /** Set once the season is over. */
+  awards: SeasonAwards | null;
   /** The user's played matches, oldest first. */
   results: MatchRecord[];
   prediction: SeasonPrediction;

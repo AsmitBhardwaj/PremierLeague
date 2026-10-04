@@ -152,6 +152,7 @@ function buildView(): SeasonView {
     squad: career.squadStates(),
     lineup: career.userLineup(),
     projection: career.projection(),
+    awards: career.phase === 'finished' ? career.awards() : null,
     results,
     prediction: meta.prediction,
     identity: meta.identity,

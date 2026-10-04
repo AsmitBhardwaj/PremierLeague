@@ -1,7 +1,16 @@
 import { createRng } from '../rng';
 import { teamProfile } from '../predict/ratings';
 import { expectedGoals, samplePoisson } from '../predict/surrogate';
-import type { MatchResult, MatchSnapshot, Player, Side, SideChanges, Tactic, Team } from '../types';
+import type {
+  MatchResult,
+  MatchSnapshot,
+  Player,
+  Position,
+  Side,
+  SideChanges,
+  Tactic,
+  Team,
+} from '../types';
 import type { Fixture } from './fixtures';
 import { hashSeed } from './hash';
 import {
@@ -9,6 +18,7 @@ import {
   seasonPlayerId,
   type MatchdayOutcome,
   type PendingMatchday,
+  type PlayerSeasonStat,
   type SeasonSetup,
   type UserLineup,
 } from './season';
@@ -84,6 +94,56 @@ export interface PendingPlay {
   readonly pending: PendingMatchday;
   readonly user: NonNullable<PendingMatchday['user']>;
 }
+
+/** A player's season line for the awards. */
+export interface AwardLine {
+  playerId: string;
+  name: string;
+  position: Position;
+  clubId: string;
+  appearances: number;
+  goals: number;
+  assists: number;
+  averageRating: number;
+}
+
+export interface SeasonAwards {
+  /** League-wide, from the engine's match ratings. */
+  topScorer: AwardLine | null;
+  playerOfSeason: AwardLine | null;
+  /** The same two awards among the user's own players, for the matches they played for the club. */
+  userTopScorer: AwardLine | null;
+  userBestPlayer: AwardLine | null;
+}
+
+/** Fewest appearances to win player of the season (a hot streak in a few games is not a season). */
+export const MIN_AWARD_APPEARANCES = 15;
+/** Fewest appearances for the user's best player (squads rotate, and a January signing plays fewer). */
+const MIN_USER_APPEARANCES = 8;
+
+const line = (s: PlayerSeasonStat): AwardLine => ({
+  playerId: s.playerId,
+  name: s.name,
+  position: s.position,
+  clubId: s.clubId,
+  appearances: s.appearances,
+  goals: s.goals,
+  assists: s.assists,
+  averageRating: s.appearances ? s.ratingSum / s.appearances : 0,
+});
+
+const byGoals = (a: AwardLine, b: AwardLine): number =>
+  b.goals - a.goals ||
+  b.assists - a.assists ||
+  a.appearances - b.appearances ||
+  a.playerId.localeCompare(b.playerId) ||
+  a.clubId.localeCompare(b.clubId);
+
+const byRating = (a: AwardLine, b: AwardLine): number =>
+  b.averageRating - a.averageRating ||
+  b.goals - a.goals ||
+  a.playerId.localeCompare(b.playerId) ||
+  a.clubId.localeCompare(b.clubId);
 
 /** A user-facing career: one season, the user's lineup, the January window and the decision log. */
 export class Career {
@@ -253,6 +313,50 @@ export class Career {
   /** The user's most recent match played through kick-off and half-time, with its full result. */
   get lastWatched(): WatchedMatch | undefined {
     return this.watched;
+  }
+
+  /**
+   * End-of-season awards. League-wide, a player counts for all the clubs he played for (a signing
+   * the user made has a line at his real club too), under the club where he played most.
+   */
+  awards(): SeasonAwards {
+    const stats = this.season.playerStats();
+    const merged = new Map<string, AwardLine>();
+    for (const s of stats) {
+      const mine = line(s);
+      const seen = merged.get(s.playerId);
+      if (!seen) {
+        merged.set(s.playerId, mine);
+        continue;
+      }
+      const goals = seen.goals + mine.goals;
+      const assists = seen.assists + mine.assists;
+      const appearances = seen.appearances + mine.appearances;
+      const total = seen.averageRating * seen.appearances + mine.averageRating * mine.appearances;
+      const home = mine.appearances > seen.appearances ? mine.clubId : seen.clubId;
+      merged.set(s.playerId, {
+        ...seen,
+        clubId: home,
+        goals,
+        assists,
+        appearances,
+        averageRating: total / appearances,
+      });
+    }
+    const all = [...merged.values()];
+    const eligible = all.filter((p) => p.appearances >= MIN_AWARD_APPEARANCES);
+    const mineOnly = stats.filter((s) => s.clubId === this.userClubId).map(line);
+    const mineEligible = mineOnly.filter((p) => p.appearances >= MIN_USER_APPEARANCES);
+    const pick = (list: AwardLine[], order: (a: AwardLine, b: AwardLine) => number) =>
+      [...list].sort(order)[0] ?? null;
+    const scorer = pick(all, byGoals);
+    const userScorer = pick(mineOnly, byGoals);
+    return {
+      topScorer: scorer && scorer.goals > 0 ? scorer : null,
+      playerOfSeason: pick(eligible.length ? eligible : all, byRating),
+      userTopScorer: userScorer && userScorer.goals > 0 ? userScorer : null,
+      userBestPlayer: pick(mineEligible.length ? mineEligible : mineOnly, byRating),
+    };
   }
 
   /** Swaps made in the January window so far. */

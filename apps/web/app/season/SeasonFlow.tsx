@@ -14,11 +14,12 @@ import { listClubs } from '../play/lib/clubs';
 import { STORAGE_KEY, parseSavedFlow, type ClubIdentity } from '../play/lib/persistence';
 import { validateLineup, type Formation, type MarketPlayer } from '../play/lib/squad';
 import { Hub } from './Hub';
+import { SeasonFinale } from './Finale';
 import { TransferWindow } from './Window';
 import { LeagueTable } from './LeagueTable';
 import { ProjectionPanel } from './Projection';
 import { SeasonClient } from './lib/client';
-import { ordinal, resultLetter, userPosition } from './lib/format';
+import { ordinal, userPosition } from './lib/format';
 import type { MatchFinish, MatchStart, SeasonView } from './lib/protocol';
 import { SEASON_STORAGE_KEY, USER_CLUB_ID } from './lib/setup';
 import '../match/match.css';
@@ -356,6 +357,26 @@ export function SeasonFlow() {
     window.location.href = '/play';
   };
 
+  /** Clear the finished season, keep the club, and go back to building a squad. */
+  const startNewSeason = () => {
+    try {
+      localStorage.removeItem(SEASON_STORAGE_KEY);
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          step: 'squad',
+          identity: view?.identity,
+          selectedIds: [],
+          formation: '4-4-2',
+          starterIds: [],
+        }),
+      );
+    } catch {
+      // Without storage the club builder simply starts fresh.
+    }
+    window.location.href = '/play';
+  };
+
   const afterMatch = () => {
     void run(async (client) => {
       const response = await client.send({ kind: 'ack' });
@@ -629,19 +650,7 @@ export function SeasonFlow() {
       ) : null}
 
       {stage === 'finished' ? (
-        <section className="se-window page-shell" aria-labelledby="se-end-title">
-          <p className="mt-kicker">Full time on the season</p>
-          <h1 id="se-end-title">
-            Finished {ordinal(position)} with {view.table[position - 1]?.points} points
-          </h1>
-          <p>
-            You won {view.results.filter((r) => resultLetter(r) === 'W').length}, drew{' '}
-            {view.results.filter((r) => resultLetter(r) === 'D').length} and lost{' '}
-            {view.results.filter((r) => resultLetter(r) === 'L').length}. The full season summary
-            and a way to start a new season are coming.
-          </p>
-          <LeagueTable table={view.table} names={names} caption="Final league table" />
-        </section>
+        <SeasonFinale view={view} names={names} onNewSeason={startNewSeason} />
       ) : null}
     </main>
   );

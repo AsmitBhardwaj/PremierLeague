@@ -27,3 +27,21 @@ export function resultLetter(record: MatchRecord): 'W' | 'D' | 'L' {
 
 export const FORM_LABEL = (form: number): string =>
   Math.abs(form) < 0.05 ? 'Neutral' : `${form > 0 ? '+' : '−'}${Math.abs(form).toFixed(1)}`;
+
+/** The pre-season prediction's most likely finishing position. */
+export const predictedPosition = (prediction: {
+  positionDistribution: { position: number; probability: number }[];
+}): number =>
+  prediction.positionDistribution.reduce((best, row) =>
+    row.probability > best.probability ? row : best,
+  ).position;
+
+/** "Predicted 11th, finished 7th: +4 places". */
+export function placesSummary(predicted: number, finished: number): string {
+  const gained = predicted - finished;
+  const change =
+    gained === 0
+      ? 'exactly as predicted'
+      : `${gained > 0 ? '+' : '−'}${Math.abs(gained)} ${Math.abs(gained) === 1 ? 'place' : 'places'}`;
+  return `Predicted ${ordinal(predicted)}, finished ${ordinal(finished)}: ${change}`;
+}

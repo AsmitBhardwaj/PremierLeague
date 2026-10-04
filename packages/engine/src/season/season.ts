@@ -62,6 +62,19 @@ export interface PlayerSeasonState {
   ratingSum: number;
 }
 
+/** One player's totals for one club (a player the user signed has a line for each club). */
+export interface PlayerSeasonStat {
+  playerId: string;
+  name: string;
+  position: Position;
+  clubId: string;
+  appearances: number;
+  goals: number;
+  assists: number;
+  /** Sum of match ratings; divide by appearances for the average. */
+  ratingSum: number;
+}
+
 export interface MatchRecord {
   round: number;
   home: string;
@@ -194,6 +207,8 @@ export class Season {
   private readonly rows = new Map<string, TableRow>();
   private readonly records: MatchRecord[] = [];
   private lineup: UserLineup | undefined;
+  /** Players the user sold in the window, kept so their season totals still count. */
+  private readonly departed = new Map<string, Player>();
   readonly transferMarket: SeasonSetup['transferMarket'];
   private nextRound = 0;
   private pending: PendingMatchday | undefined;
@@ -294,18 +309,23 @@ export class Season {
     const id = this.userClubId;
     if (id === undefined) throw new Error('this season has no user club');
     const club = this.clubs.get(id)!;
-    this.state.delete(seasonPlayerId(id, outId));
+    // The sold player's totals stay in the books (end-of-season awards); his availability is moot.
+    const sold = club.players.find((p) => p.id === outId);
+    if (sold) this.departed.set(outId, sold);
     const source = this.state.get(seasonPlayerId(fromClubId, incoming.id));
+    // A player bought back keeps what he did for the club earlier in the season.
+    const earlier = this.state.get(seasonPlayerId(id, incoming.id));
     this.state.set(seasonPlayerId(id, incoming.id), {
       fitness: source?.fitness ?? 100,
       form: source?.form ?? 0,
       injuredFor: source?.injuredFor ?? 0,
       suspendedFor: source?.suspendedFor ?? 0,
-      appearances: 0,
-      goals: 0,
-      assists: 0,
-      ratingSum: 0,
+      appearances: earlier?.appearances ?? 0,
+      goals: earlier?.goals ?? 0,
+      assists: earlier?.assists ?? 0,
+      ratingSum: earlier?.ratingSum ?? 0,
     });
+    this.departed.delete(incoming.id);
     this.clubs = new Map(this.clubs).set(id, {
       ...club,
       players: club.players.map((p) => (p.id === outId ? incoming : p)),
@@ -571,6 +591,30 @@ export class Season {
 
   clubIds(): string[] {
     return [...this.clubs.keys()];
+  }
+
+  /** Every player's totals for each club he has played for, in a stable order. */
+  playerStats(): PlayerSeasonStat[] {
+    const out: PlayerSeasonStat[] = [];
+    for (const club of this.clubs.values()) {
+      const everyone =
+        club.id === this.userClubId ? [...club.players, ...this.departed.values()] : club.players;
+      for (const p of everyone) {
+        const s = this.state.get(seasonPlayerId(club.id, p.id));
+        if (!s || s.appearances === 0) continue;
+        out.push({
+          playerId: p.id,
+          name: p.name,
+          position: p.position,
+          clubId: club.id,
+          appearances: s.appearances,
+          goals: s.goals,
+          assists: s.assists,
+          ratingSum: s.ratingSum,
+        });
+      }
+    }
+    return out;
   }
 
   /** Raw (un-namespaced) squad of a club. */

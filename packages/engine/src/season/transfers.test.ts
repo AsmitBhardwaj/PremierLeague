@@ -267,7 +267,8 @@ describe('January window transfers', () => {
   });
 
   it("bring a signing with his real club's injury and fitness", () => {
-    const career = atWindow();
+    // Seed 3 leaves real players injured at the window; the guard checks the rule is exercised.
+    const career = atWindow(3);
     const hurt = career.season
       .clubIds()
       .flatMap((id) => (id === 'USER' ? [] : career.season.squadOf(id).map((p) => ({ id, p }))))
@@ -275,10 +276,14 @@ describe('January window transfers', () => {
         ({ id, p }) =>
           career.season.outFor(id, p.id) > 0 && !career.squad().some((s) => s.id === p.id),
       );
-    if (!hurt) return; // no injury at this seed: nothing to carry
-    const out = mine(career, hurt.p.position);
-    career.apply({ type: 'transfer', out: out.id, in: hurt.p.id });
-    expect(career.season.outFor('USER', hurt.p.id)).toBe(career.season.outFor(hurt.id, hurt.p.id));
+    expect(hurt, 'seed 3 must leave a real player injured at the window').toBeDefined();
+    const out = mine(career, hurt!.p.position);
+    expect(career.season.outFor('USER', hurt!.p.id)).toBe(0);
+    career.apply({ type: 'transfer', out: out.id, in: hurt!.p.id });
+    expect(career.season.outFor('USER', hurt!.p.id)).toBe(
+      career.season.outFor(hurt!.id, hurt!.p.id),
+    );
+    expect(career.season.outFor('USER', hurt!.p.id)).toBeGreaterThan(0);
   });
 });
 

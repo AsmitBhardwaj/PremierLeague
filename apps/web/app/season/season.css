@@ -130,6 +130,29 @@
   font-size: 28px;
 }
 
+.se-odds {
+  display: grid;
+  gap: 10px;
+}
+
+.se-odds dd {
+  font-family: var(--body);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.se-verdict {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  background: var(--volt);
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .se-list {
   display: grid;
   gap: 8px;
@@ -447,4 +470,19 @@
 
 .se-finale .se-actions {
   margin-top: 24px;
+}
+
+.se-versus {
+  margin: 20px 0;
+  padding: 22px;
+}
+
+.se-versus ul {
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  font-size: 18px;
+  font-weight: 600;
 }

@@ -95,6 +95,14 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 - **Engine changes:** two additive, optional inputs/outputs: `MatchInput.startStamina` and `PlayerMatchRating.individual`. The golden fingerprint test proves RNG order and outcomes are unchanged when they are absent. The season module lives in `packages/engine/src/season/` and stays pure.
 - **Landing page:** after the loop works, "How your career works" step 04 and the Highlights copy mention playing a full season with a live league table (separate small commit).
 
+### Approved season-preview decisions (UI batch after Phase 5)
+
+- **The prediction screen is the "Season preview".** It speaks in fan terms (no "engine", "simulation" or "distribution" on screen) and shows no charts: a verdict, "Most likely 7th — anywhere from 4th to 12th" (10th to 90th percentile), the predicted record and points, goals scored and conceded, goal difference, clean sheets, yellow and red cards (whole numbers with "~"), the predicted top scorer, top assister and star player (highest average rating among regulars), "Toughest trip", "Toughest at home" and "Banker" by name, and the odds in words.
+- **Verdict mapping** (first match wins): Title contenders (title chance 15%+, or most likely finish top two); Champions League chase (most likely top four, or top-four chance 40%+); Europa League contenders (most likely 5th to 7th); Relegation scrap (relegation chance 50%+, or most likely 18th or lower); Survival fight (relegation chance 20%+, or most likely 15th to 17th); otherwise Comfortable mid-table.
+- **Odds wording:** under 0.1% "very unlikely"; 0.1% to 2% "a long shot (1 in N)"; 2% to 15% "unlikely (1 in N)"; 15% to 35% "a real chance (1 in N)"; 35% to 65% "about even"; 65% to 90% "likely (N in 10)"; 90%+ "very likely". N is rounded the way people say it (exact below 10, nearest 5 below 50, one figure above).
+- **Where the numbers come from:** the record, points, goals and clean sheets are the existing surrogate prediction's season averages (`SeasonPrediction.teamStats`). Cards and the three player picks come from a batch of 12 full event-engine seasons of the user's 38 matches (`forecastUserSeasons`, season dynamics on, balanced tactic, opponents fresh) that runs in the same Web Worker after the team forecast has been sent, so team stats show first and player stats fill in. The season worker stores the same batch's summary in the save (`prediction.forecast`), so the hub and the end-of-season screen can say "Predicted ~54 goals, scored 61". Older saves without these fields simply omit the lines.
+- **Default stadium:** optional; blank means "[Club name] Stadium".
+
 ## 5. How the prediction works
 
 1. **Players → ratings.** FPL stats (xG, xA, creativity, threat, defensive actions, saves, minutes) are mapped to 0–100 engine ratings by **global rules** in `ratings.ts`:

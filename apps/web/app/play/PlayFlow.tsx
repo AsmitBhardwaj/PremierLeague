@@ -1,6 +1,6 @@
 'use client';
 
-import type { SeasonPrediction } from '@pl/engine';
+import type { ForecastSummary, SeasonPrediction } from '@pl/engine';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -28,10 +28,13 @@ import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
 import { MarketList } from '../components/MarketList';
+import { SeasonPreview } from './SeasonPreview';
+import type { PredictionMessage } from './prediction.worker';
 import {
   STORAGE_KEY,
   emptyIdentity,
   parseSavedFlow,
+  stadiumName,
   validateIdentity,
   type ClubIdentity,
   type CrestShape,
@@ -52,13 +55,6 @@ const stepNames: Record<Step, string> = {
 };
 
 const money = formatMoney;
-const pct = (value: number) => `${(value * 100).toFixed(value > 0 && value < 0.01 ? 1 : 0)}%`;
-const ordinal = (position: number) => {
-  const mod100 = position % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${position}th`;
-  const endings = ['th', 'st', 'nd', 'rd'];
-  return `${position}${endings[position % 10] ?? 'th'}`;
-};
 const statusLabel = (status: string) =>
   ({ a: 'Available', d: 'Doubtful', i: 'Injured', s: 'Suspended' })[status] ?? status;
 
@@ -172,15 +168,13 @@ function IdentityStep({
               <input
                 value={identity.stadium}
                 onChange={(event) => update('stadium', event.target.value)}
-                aria-invalid={Boolean(errors.stadium)}
-                aria-describedby={errors.stadium ? 'stadium-error' : undefined}
+                placeholder={stadiumName({ name: identity.name, stadium: '' })}
                 autoComplete="off"
               />
-              {errors.stadium ? (
-                <small id="stadium-error" className="field-error">
-                  {errors.stadium}
-                </small>
-              ) : null}
+              <small>
+                Optional. Left blank, it is called “
+                {stadiumName({ name: identity.name || 'Your club', stadium: '' })}”.
+              </small>
             </label>
           </div>
           <fieldset className="crest-options">
@@ -231,7 +225,7 @@ function IdentityStep({
           <p className="card-kicker">Club preview</p>
           <Crest identity={identity} large />
           <h2>{identity.name || 'Your club'}</h2>
-          <p>{identity.stadium || 'Your stadium'}</p>
+          <p>{stadiumName(identity)}</p>
           <span>Entering in place of {REPLACED_CLUB.name}</span>
         </Card>
       </form>
@@ -465,7 +459,7 @@ function LineupStep({
       <SectionHeading
         eyebrow="21st Club · Tactical screen · Step 03"
         title="Pick your XI"
-        copy="Choose one of the engine-supported formations. Your remaining seven players form the bench."
+        copy="Choose one of the six formations. Your remaining seven players form the bench."
       />
       <div className="formation-picker" aria-label="Formation">
         {(Object.keys(FORMATIONS) as Formation[]).map((item) => (
@@ -551,7 +545,7 @@ function LineupStep({
                 {inspectedPlayer.clubName} · {money(inspectedPlayer.value)} ·{' '}
                 {statusLabel(inspectedPlayer.status)}
               </p>
-              <div className="rating-bars" aria-label={`${inspectedPlayer.name} engine ratings`}>
+              <div className="rating-bars" aria-label={`${inspectedPlayer.name} ratings`}>
                 {Object.entries(inspectedPlayer.ratings).map(([label, value]) => (
                   <div key={label}>
                     <span>{label}</span>
@@ -610,6 +604,8 @@ function LineupStep({
 function PredictionStep({
   identity,
   prediction,
+  forecast,
+  forecastDone,
   loading,
   error,
   onBack,
@@ -617,27 +613,27 @@ function PredictionStep({
 }: {
   identity: ClubIdentity;
   prediction: SeasonPrediction | null;
+  forecast: ForecastSummary | null;
+  forecastDone: boolean;
   loading: boolean;
   error: string;
   onBack: () => void;
   onRetry: () => void;
 }) {
-  const [shareStatus, setShareStatus] = useState('');
-  const [manualCopy, setManualCopy] = useState(false);
   if (loading)
     return (
       <section className="builder-step page-shell prediction-loading" aria-live="polite">
         <span className="loading-mark" />
-        <p className="eyebrow">10,000 seasons in progress</p>
-        <h1>Calculating the campaign.</h1>
-        <p>The prediction runs off the main browser thread, so this page remains responsive.</p>
+        <p className="eyebrow">Season preview</p>
+        <h1>Working out your season.</h1>
+        <p>This takes a moment. The page stays responsive while it runs.</p>
       </section>
     );
   if (error || !prediction)
     return (
       <section className="builder-step page-shell prediction-loading">
-        <p className="eyebrow">Prediction unavailable</p>
-        <h1>Something stopped the simulation.</h1>
+        <p className="eyebrow">Season preview unavailable</p>
+        <h1>Something stopped the preview.</h1>
         <p>{error || 'No result was returned.'}</p>
         <div className="button-row">
           <button className="button button-secondary button-default" onClick={onBack}>
@@ -649,147 +645,16 @@ function PredictionStep({
         </div>
       </section>
     );
-  const likely = prediction.positionDistribution.reduce((best, item) =>
-    item.probability > best.probability ? item : best,
-  );
-  const peak = Math.max(...prediction.positionDistribution.map((item) => item.probability));
-  const pointsPeak = Math.max(...prediction.pointsDistribution.map((item) => item.probability));
-  const shareText = `${identity.name} are predicted to finish ${ordinal(likely.position)} with ${prediction.meanPoints.toFixed(1)} points across ${prediction.seasons.toLocaleString()} simulated seasons.`;
-  const share = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `${identity.name} season prediction`,
-          text: shareText,
-          url: location.href,
-        });
-        setShareStatus('Prediction shared.');
-        return;
-      }
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${shareText} ${location.href}`);
-        setShareStatus('Prediction copied to your clipboard.');
-        return;
-      }
-      setManualCopy(true);
-      setShareStatus('Select and copy the result below.');
-    } catch (shareError) {
-      if (shareError instanceof DOMException && shareError.name === 'AbortError') return;
-      setManualCopy(true);
-      setShareStatus('Select and copy the result below.');
-    }
-  };
-
   return (
-    <section className="builder-step page-shell prediction-step">
-      <SectionHeading
-        eyebrow="21st Club · Forecast desk · Step 04"
-        title="Your prediction"
-        copy={`A real ${prediction.seasons.toLocaleString()}-season engine forecast. ${identity.name} replaces ${REPLACED_CLUB.name} in a 20-club league.`}
-      />
-      <Card className="result-card">
-        <div className="result-identity">
-          <Crest identity={identity} large />
-          <div>
-            <p className="card-kicker">Most likely finish</p>
-            <h2>{identity.name}</h2>
-            <span>{identity.stadium}</span>
-          </div>
-          <strong>{ordinal(likely.position)}</strong>
-        </div>
-        <div className="result-stats">
-          <Stat label="Mean points" value={prediction.meanPoints.toFixed(1)} />
-          <Stat label="Title" value={pct(prediction.titleProbability)} />
-          <Stat label="Top four" value={pct(prediction.top4Probability)} />
-          <Stat label="Relegation" value={pct(prediction.relegationProbability)} />
-        </div>
-        <div className="distribution-grid">
-          <figure>
-            <figcaption>Finishing position distribution</figcaption>
-            <div
-              className="position-chart"
-              aria-label="Finishing position probability distribution"
-            >
-              {prediction.positionDistribution.map((item) => (
-                <div
-                  key={item.position}
-                  title={`${ordinal(item.position)}: ${pct(item.probability)}`}
-                >
-                  <span style={{ height: `${Math.max(2, (item.probability / peak) * 100)}%` }} />
-                  <small>{item.position}</small>
-                </div>
-              ))}
-            </div>
-            <p className="chart-caption">Position · 1st to 20th</p>
-          </figure>
-          <figure>
-            <figcaption>Points distribution</figcaption>
-            <div className="points-chart" aria-label="Season points probability distribution">
-              {prediction.pointsDistribution.map((item) => (
-                <div
-                  key={item.min}
-                  title={`${item.min}–${item.max} points: ${pct(item.probability)}`}
-                >
-                  <span
-                    style={{ height: `${Math.max(2, (item.probability / pointsPeak) * 100)}%` }}
-                  />
-                  <small>{item.min}</small>
-                </div>
-              ))}
-            </div>
-            <p className="chart-caption">Points · five-point bands</p>
-          </figure>
-        </div>
-        <div className="share-row">
-          <button className="button button-primary button-default" type="button" onClick={share}>
-            Share prediction <span aria-hidden="true">↗</span>
-          </button>
-          <span aria-live="polite">{shareStatus}</span>
-        </div>
-        {manualCopy ? (
-          <textarea
-            readOnly
-            value={`${shareText} ${location.href}`}
-            aria-label="Prediction text to copy"
-          />
-        ) : null}
-      </Card>
-      <div className="opponent-section">
-        <div>
-          <p className="eyebrow">Fixture outlook</p>
-          <h2>Expected points by opponent</h2>
-        </div>
-        <Card className="opponent-table">
-          <div className="opponent-row opponent-head">
-            <span>Opponent</span>
-            <span>Home</span>
-            <span>Away</span>
-            <span>Total</span>
-          </div>
-          {[...prediction.perOpponentExpectedPoints]
-            .sort((a, b) => b.total - a.total)
-            .map((opponent) => (
-              <div className="opponent-row" key={opponent.opponentId}>
-                <strong>{opponent.opponentName}</strong>
-                <span>{opponent.home.toFixed(2)}</span>
-                <span>{opponent.away.toFixed(2)}</span>
-                <strong>{opponent.total.toFixed(2)}</strong>
-              </div>
-            ))}
-        </Card>
-      </div>
-      <div className="step-actions">
-        <button className="button button-secondary button-default" type="button" onClick={onBack}>
-          ← Change starting XI
-        </button>
-        <a className="button button-secondary button-default" href="/match">
-          Play a friendly
-        </a>
-        <a className="button button-primary button-default" href="/season">
-          Start season <span aria-hidden="true">→</span>
-        </a>
-      </div>
-    </section>
+    <SeasonPreview
+      identity={{ ...identity, stadium: stadiumName(identity) }}
+      replacedName={REPLACED_CLUB.name}
+      prediction={prediction}
+      forecast={forecast}
+      forecastDone={forecastDone}
+      crest={<Crest identity={identity} large />}
+      onBack={onBack}
+    />
   );
 }
 
@@ -801,6 +666,8 @@ export function PlayFlow() {
   const [formation, setFormation] = useState<Formation>('4-4-2');
   const [starterIds, setStarterIds] = useState<string[]>([]);
   const [prediction, setPrediction] = useState<SeasonPrediction | null>(null);
+  const [forecast, setForecast] = useState<ForecastSummary | null>(null);
+  const [forecastDone, setForecastDone] = useState(false);
   const [predictionError, setPredictionError] = useState('');
   const [predictionRun, setPredictionRun] = useState(0);
 
@@ -845,13 +712,22 @@ export function PlayFlow() {
     )
       return;
     setPrediction(null);
+    setForecast(null);
+    setForecastDone(false);
     setPredictionError('');
     const worker = new Worker(new URL('./prediction.worker.ts', import.meta.url));
-    worker.onmessage = ({
-      data,
-    }: MessageEvent<{ prediction?: SeasonPrediction; error?: string }>) => {
-      if (data.prediction) setPrediction(data.prediction);
-      if (data.error) setPredictionError(data.error);
+    // The team forecast arrives first; the player stats follow when the season batch is done.
+    worker.onmessage = ({ data }: MessageEvent<PredictionMessage>) => {
+      if ('prediction' in data) {
+        setPrediction(data.prediction);
+        return;
+      }
+      if ('forecast' in data) {
+        setForecast(data.forecast);
+        setForecastDone(true);
+      } else {
+        setPredictionError(data.error);
+      }
       worker.terminate();
     };
     worker.onerror = () => {
@@ -863,6 +739,8 @@ export function PlayFlow() {
       seed: PREDICTION_SEED,
       replacedClubId: REPLACED_CLUB.id,
       opponents: buildOpponentTeams(market, REPLACED_CLUB.id, selected),
+      squadIds: selected.map((player) => player.id),
+      clubName: identity.name,
     });
     return () => worker.terminate();
   }, [formation, identity.name, predictionRun, selected, starterIds, step]);
@@ -904,6 +782,8 @@ export function PlayFlow() {
         <PredictionStep
           identity={identity}
           prediction={prediction}
+          forecast={forecast}
+          forecastDone={forecastDone}
           loading={!prediction && !predictionError}
           error={predictionError}
           onBack={() => setStep('lineup')}

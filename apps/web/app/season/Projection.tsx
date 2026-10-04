@@ -1,7 +1,7 @@
 import type { Projection as ProjectionData, SeasonPrediction } from '@pl/engine';
-import { ordinal, percent } from './lib/format';
+import { about, finishRange, oddsLines, ordinal, pointsFrom, verdictOf } from '../play/lib/preview';
 
-/** Predicted finish from the current table, next to the pre-season prediction. */
+/** Predicted finish from the current table, in fan words, next to the pre-season preview. */
 export function ProjectionPanel({
   projection,
   prediction,
@@ -11,36 +11,46 @@ export function ProjectionPanel({
   prediction: SeasonPrediction;
   heading?: string;
 }) {
-  const likely = projection.positions.reduce(
-    (best, p, i) => (p > projection.positions[best]! ? i : best),
-    0,
-  );
-  const preLikely = prediction.positionDistribution.reduce((best, row) =>
-    row.probability > best.probability ? row : best,
-  ).position;
+  const distribution = projection.positions.map((probability, i) => ({
+    position: i + 1,
+    probability,
+    count: 0,
+  }));
+  const odds = {
+    positionDistribution: distribution,
+    titleProbability: projection.title,
+    top4Probability: projection.top4,
+    relegationProbability: projection.relegation,
+  };
+  const finish = finishRange(distribution);
+  const verdict = verdictOf(odds);
+  const before = finishRange(prediction.positionDistribution).likely;
   return (
     <div className="se-card">
       <p className="mt-kicker">{heading}</p>
       <p className="se-big">
-        {ordinal(likely + 1)}
-        <span> most likely · about {projection.meanPoints.toFixed(0)} points</span>
+        {ordinal(finish.likely)}
+        <span>
+          {' '}
+          most likely
+          {finish.best !== finish.worst
+            ? ` — anywhere from ${ordinal(finish.best)} to ${ordinal(finish.worst)}`
+            : ''}
+        </span>
       </p>
-      <dl className="se-facts">
-        <div>
-          <dt>Title</dt>
-          <dd>{percent(projection.title)}</dd>
-        </div>
-        <div>
-          <dt>Top four</dt>
-          <dd>{percent(projection.top4)}</dd>
-        </div>
-        <div>
-          <dt>Relegation</dt>
-          <dd>{percent(projection.relegation)}</dd>
-        </div>
+      <p className="se-verdict">{verdict.label}</p>
+      <p className="mt-muted">On course for {about(projection.meanPoints)} points.</p>
+      <dl className="se-facts se-odds">
+        {oddsLines(odds).map((line) => (
+          <div key={line.label}>
+            <dt>{line.label}</dt>
+            <dd>{line.phrase}</dd>
+          </div>
+        ))}
       </dl>
       <p className="mt-muted">
-        Pre-season: {ordinal(preLikely)} most likely, about {prediction.meanPoints.toFixed(0)}{' '}
+        Before kick-off: tipped {ordinal(before)},{' '}
+        {about(prediction.teamStats ? pointsFrom(prediction.teamStats) : prediction.meanPoints)}{' '}
         points.
       </p>
     </div>

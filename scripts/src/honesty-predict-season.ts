@@ -1,13 +1,22 @@
 // Prediction honesty: play full automatically-managed seasons (event engine, season dynamics on)
 // for a sample of squads and compare with `predictSeason`.
 //   pnpm --filter @pl/scripts honesty-predict-season [seasons-per-squad]
+// Also compares the season-preview stats: the surrogate's team stats and the event-engine player
+// batch (`forecastUserSeasons`, BATCH seasons of the user's 38 matches) with the played seasons.
 // Squads: the landing sample, a balanced build, an optimised build and the cheapest legal squad,
 // all at £275m. The user's club picks its XI with `pickSquad`, plays balanced, and keeps that XI
 // (auto-replaced only when a player is unavailable); the other 19 clubs run the same rules.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Season, pickSquad, predictSeason, type Player, type Team } from '@pl/engine';
+import {
+  Season,
+  forecastUserSeasons,
+  pickSquad,
+  predictSeason,
+  type Player,
+  type Team,
+} from '@pl/engine';
 import { balancedBuild, optimise } from '../../apps/web/app/play/lib/budget-helpers';
 import {
   buildOpponentTeams,
@@ -25,6 +34,8 @@ import {
 } from '../../apps/web/app/play/lib/squad';
 
 const SEASONS = Number(process.argv[2] ?? 200);
+/** Event-engine seasons in the web worker's player-stat batch. */
+const BATCH = Number(process.env.BATCH ?? 12);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const market = JSON.parse(
   readFileSync(join(root, 'apps', 'web', 'app', 'play', 'data', 'players.json'), 'utf8'),
@@ -101,6 +112,21 @@ for (const { label, squad } of samples) {
   ).position;
   const points: number[] = [];
   const positions: number[] = [];
+  const played = {
+    wins: [] as number[],
+    draws: [] as number[],
+    losses: [] as number[],
+    goalsFor: [] as number[],
+    goalsAgainst: [] as number[],
+    cleanSheets: [] as number[],
+    yellowCards: [] as number[],
+    redCards: [] as number[],
+  };
+  const playerTotals = new Map<
+    string,
+    { goals: number; assists: number; ratings: number; apps: number }
+  >();
+  const topScorerGoals: number[] = [];
   for (let s = 0; s < SEASONS; s++) {
     const season = new Season({
       seed: 1000 + s,
@@ -112,7 +138,44 @@ for (const { label, squad } of samples) {
       starters: team.players.map((p) => p.id),
       tactic: 'balanced',
     });
-    while (!season.finished) season.playMatchday();
+    const t = { w: 0, d: 0, l: 0, gf: 0, ga: 0, cs: 0, yc: 0, rc: 0 };
+    while (!season.finished) {
+      season.playMatchday({
+        onMatch: (fixture, result) => {
+          const side = fixture.home === 'USER' ? 'home' : fixture.away === 'USER' ? 'away' : null;
+          if (!side) return;
+          const other = side === 'home' ? 'away' : 'home';
+          const scored = result.score[side];
+          const conceded = result.score[other];
+          t.gf += scored;
+          t.ga += conceded;
+          if (conceded === 0) t.cs++;
+          if (scored > conceded) t.w++;
+          else if (scored === conceded) t.d++;
+          else t.l++;
+          t.yc += result.stats[side].yellowCards;
+          t.rc += result.stats[side].redCards;
+        },
+      });
+    }
+    played.wins.push(t.w);
+    played.draws.push(t.d);
+    played.losses.push(t.l);
+    played.goalsFor.push(t.gf);
+    played.goalsAgainst.push(t.ga);
+    played.cleanSheets.push(t.cs);
+    played.yellowCards.push(t.yc);
+    played.redCards.push(t.rc);
+    const mine = season.playerStats().filter((p) => p.clubId === 'USER');
+    topScorerGoals.push(Math.max(0, ...mine.map((p) => p.goals)));
+    for (const p of mine) {
+      const line = playerTotals.get(p.playerId) ?? { goals: 0, assists: 0, ratings: 0, apps: 0 };
+      line.goals += p.goals;
+      line.assists += p.assists;
+      line.ratings += p.ratingSum;
+      line.apps += p.appearances;
+      playerTotals.set(p.playerId, line);
+    }
     const table = season.table();
     const index = table.findIndex((r) => r.clubId === 'USER');
     points.push(table[index]!.points);
@@ -139,5 +202,84 @@ for (const { label, squad } of samples) {
       `${share((p) => p >= 18)
         .toFixed(1)
         .padStart(4)}/${(100 * prediction.relegationProbability).toFixed(1).padEnd(4)}`,
+  );
+
+  // ---- season-preview stats: surrogate team stats and the player batch against played seasons
+  const lineup = {
+    formation: team.formation,
+    starters: team.players.map((p) => p.id),
+    tactic: 'balanced' as const,
+  };
+  const startedAt = performance.now();
+  const batch = forecastUserSeasons(
+    {
+      seed: 1,
+      userClubId: 'USER',
+      clubs: [{ id: 'USER', name: 'User FC', players }, ...realClubs],
+    },
+    { seasons: BATCH, seed: 7, lineup },
+  );
+  const batchMs = performance.now() - startedAt;
+  const pct = (a: number, b: number): string =>
+    `${a >= b ? '+' : ''}${((100 * (a - b)) / b).toFixed(1)}%`;
+  const row = (name: string, pred: number, batchValue: number | null, actual: number): string =>
+    `  ${name.padEnd(15)} played ${actual.toFixed(1).padStart(6)} | surrogate ${pred.toFixed(1).padStart(6)} (${pct(pred, actual).padStart(7)})` +
+    (batchValue === null
+      ? ''
+      : ` | batch ${batchValue.toFixed(1).padStart(6)} (${pct(batchValue, actual).padStart(7)})`);
+  const ts = prediction.teamStats!;
+  console.log(
+    `  -- ${label}: preview stats (batch ${BATCH} seasons in ${batchMs.toFixed(0)} ms in Node)`,
+  );
+  console.log(row('wins', ts.wins, batch.team.wins, mean(played.wins)));
+  console.log(row('draws', ts.draws, batch.team.draws, mean(played.draws)));
+  console.log(row('losses', ts.losses, batch.team.losses, mean(played.losses)));
+  console.log(row('goals scored', ts.goalsFor, batch.team.goalsFor, mean(played.goalsFor)));
+  console.log(
+    row('goals conceded', ts.goalsAgainst, batch.team.goalsAgainst, mean(played.goalsAgainst)),
+  );
+  console.log(
+    row('clean sheets', ts.cleanSheets, batch.team.cleanSheets, mean(played.cleanSheets)),
+  );
+  console.log(
+    row('yellow cards', NaN, batch.team.yellowCards, mean(played.yellowCards)).replace(
+      /surrogate\s+NaN \(\s*NaN%\)/,
+      'surrogate    n/a',
+    ),
+  );
+  console.log(
+    row('red cards', NaN, batch.team.redCards, mean(played.redCards)).replace(
+      /surrogate\s+NaN \(\s*NaN%\)/,
+      'surrogate    n/a',
+    ),
+  );
+  const avg = (id: string) => {
+    const l = playerTotals.get(id);
+    return l
+      ? {
+          goals: l.goals / SEASONS,
+          assists: l.assists / SEASONS,
+          rating: l.apps ? l.ratings / l.apps : 0,
+        }
+      : { goals: 0, assists: 0, rating: 0 };
+  };
+  const pick = (
+    name: string,
+    p: typeof batch.topScorer,
+    field: 'goals' | 'assists' | 'rating',
+  ): void => {
+    if (!p) return;
+    const actual = avg(p.playerId)[field];
+    const predicted = field === 'rating' ? p.averageRating : p[field];
+    console.log(
+      `  ${name.padEnd(15)} ${p.name} (${p.position}): batch ${predicted.toFixed(2)}, played ${actual.toFixed(2)} (${pct(predicted, actual)})`,
+    );
+  };
+  pick('top scorer', batch.topScorer, 'goals');
+  pick('top assister', batch.topAssister, 'assists');
+  pick('star player', batch.starPlayer, 'rating');
+  const bestPlayed = [...playerTotals].sort(([, a], [, b]) => b.goals - a.goals)[0];
+  console.log(
+    `  played-seasons leading scorer averages ${(bestPlayed![1].goals / SEASONS).toFixed(2)} goals (batch top scorer: ${batch.topScorer?.name})`,
   );
 }

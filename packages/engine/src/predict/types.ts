@@ -1,4 +1,4 @@
-import type { Team } from '../types';
+import type { Position, Team } from '../types';
 
 export interface PredictSeasonOptions {
   /** Number of simulated seasons; limited by the checked-in background data. */
@@ -35,6 +35,40 @@ export interface OpponentExpectedPoints {
   total: number;
 }
 
+/** Average season totals for the user's club across the simulated seasons. */
+export interface TeamForecast {
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  cleanSheets: number;
+}
+
+/** One player's average season across the forecast batch. */
+export interface PlayerForecast {
+  playerId: string;
+  name: string;
+  position: Position;
+  goals: number;
+  assists: number;
+  /** Mean match rating over his appearances. */
+  averageRating: number;
+  /** Appearances a season. */
+  appearances: number;
+}
+
+/** What the season preview keeps from the event-engine batch (small enough to save). */
+export interface ForecastSummary {
+  /** How many full seasons of the user's 38 matches were played. */
+  seasons: number;
+  yellowCards: number;
+  redCards: number;
+  topScorer: PlayerForecast | null;
+  topAssister: PlayerForecast | null;
+  starPlayer: PlayerForecast | null;
+}
+
 export interface SeasonPrediction {
   seasons: number;
   seed: number;
@@ -46,6 +80,10 @@ export interface SeasonPrediction {
   top4Probability: number;
   relegationProbability: number;
   perOpponentExpectedPoints: OpponentExpectedPoints[];
+  /** Average record and goals per season; absent in predictions saved before the season preview. */
+  teamStats?: TeamForecast;
+  /** Player and card forecast from the event engine; filled in after the prediction itself. */
+  forecast?: ForecastSummary;
 }
 
 export type UserSquad = Team;

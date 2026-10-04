@@ -1,0 +1,273 @@
+/* Season preview: fan stats on cream under a grass header band. */
+.pv {
+  display: grid;
+  gap: 28px;
+  align-content: start;
+}
+
+.pv-band {
+  padding: 30px 32px 28px;
+  color: var(--cream);
+  border: 3px solid var(--ink);
+  box-shadow: 12px 12px 0 var(--deep-green);
+}
+
+.pv-eyebrow {
+  margin: 0;
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pv-band h1 {
+  margin: 10px 0 18px;
+  font-family: var(--display);
+  font-size: clamp(46px, 6.2vw, 80px);
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.pv-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pv-identity strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pv-identity span {
+  color: var(--cream);
+  font-size: 15px;
+}
+
+.pv-verdict-card {
+  padding: 28px;
+  box-shadow: 12px 12px 0 var(--deep-green);
+}
+
+.pv-tag {
+  display: inline-block;
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--volt);
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: clamp(22px, 3.4vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.pv-tag[data-verdict='mid-table'] {
+  background: var(--chip);
+}
+
+.pv-tag[data-verdict='survival'],
+.pv-tag[data-verdict='relegation'] {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.pv-finish {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.pv-finish strong {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.pv-facts {
+  margin: 24px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 2px solid var(--ink);
+}
+
+.pv-fact {
+  padding: 14px 12px 14px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.pv-fact dt {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pv-fact dd {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  align-items: start;
+}
+
+.pv-card {
+  padding: 24px;
+  box-shadow: 8px 8px 0 var(--deep-green);
+}
+
+.pv-card h2 {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pv-players,
+.pv-fixtures {
+  margin: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.pv-players dt,
+.pv-fixtures dt,
+.pv-odds span {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pv-players dd,
+.pv-fixtures dd {
+  margin: 4px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 17px;
+}
+
+.pv-players dd strong {
+  font-size: 19px;
+}
+
+.pv-players dd em {
+  color: var(--text-secondary);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.pv-pending {
+  color: var(--text-muted);
+}
+
+.pv-note {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.pv-pos {
+  padding: 1px 6px;
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--chip);
+}
+
+.pv-pos-gk {
+  background: var(--gk);
+}
+
+.pv-pos-def {
+  background: var(--def);
+}
+
+.pv-pos-mid {
+  background: var(--mid);
+}
+
+.pv-pos-fwd {
+  background: var(--fwd);
+}
+
+.pv-fixtures dd {
+  font-weight: 600;
+}
+
+.pv-odds {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  list-style: none;
+}
+
+.pv-odds li {
+  display: grid;
+  gap: 2px;
+}
+
+.pv-odds strong {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pv-copy {
+  width: 100%;
+  min-height: 90px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+}
+
+@media (max-width: 1000px) {
+  .pv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pv-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .pv-band {
+    padding: 22px 18px;
+    box-shadow: 8px 8px 0 var(--deep-green);
+  }
+
+  .pv-verdict-card {
+    padding: 20px;
+    box-shadow: 8px 8px 0 var(--deep-green);
+  }
+
+  .pv-identity span {
+    display: block;
+  }
+}

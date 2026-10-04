@@ -111,6 +111,15 @@ export function predictSeason(
   let titles = 0;
   let top4 = 0;
   let relegations = 0;
+  const totals = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, cleanSheets: 0 };
+  const tally = (scored: number, conceded: number): void => {
+    totals.goalsFor += scored;
+    totals.goalsAgainst += conceded;
+    if (conceded === 0) totals.cleanSheets++;
+    if (scored > conceded) totals.wins++;
+    else if (scored === conceded) totals.draws++;
+    else totals.losses++;
+  };
   // Offset selects a deterministic window/order through the fixed background without regenerating it.
   const offset = ((seed % DATA.seasons) + DATA.seasons) % DATA.seasons;
   const rng = createRng(seed ^ 0x9e3779b9);
@@ -125,6 +134,7 @@ export function predictSeason(
       const opponent = background.clubs[club]!;
       const opponentProfile = opponentProfiles.get(opponent.id) ?? opponent.profile;
       const atHome = simulateSurrogateMatch(user, opponentProfile, rng);
+      tally(atHome.homeGoals, atHome.awayGoals);
       userPoints +=
         atHome.homeGoals > atHome.awayGoals ? 3 : atHome.homeGoals === atHome.awayGoals ? 1 : 0;
       addResult(points, club, atHome.awayGoals, atHome.homeGoals);
@@ -132,6 +142,7 @@ export function predictSeason(
         atHome.homeGoals > atHome.awayGoals ? 3 : atHome.homeGoals === atHome.awayGoals ? 1 : 0;
 
       const away = simulateSurrogateMatch(opponentProfile, user, rng);
+      tally(away.awayGoals, away.homeGoals);
       const awayPoints =
         away.awayGoals > away.homeGoals ? 3 : away.awayGoals === away.homeGoals ? 1 : 0;
       userPoints += awayPoints;
@@ -179,9 +190,19 @@ export function predictSeason(
     top4Probability: top4 / seasons,
     relegationProbability: relegations / seasons,
     perOpponentExpectedPoints,
+    teamStats: {
+      wins: totals.wins / seasons,
+      draws: totals.draws / seasons,
+      losses: totals.losses / seasons,
+      goalsFor: totals.goalsFor / seasons,
+      goalsAgainst: totals.goalsAgainst / seasons,
+      cleanSheets: totals.cleanSheets / seasons,
+    },
   };
 }
 
+export { forecastUserSeasons, summariseForecast } from './forecast';
+export type { SeasonBatchForecast, ForecastOptions } from './forecast';
 export { aggregateTeamRatings, teamProfile } from './ratings';
 export type { TeamAggregateRatings, TeamProfile } from './ratings';
 export {

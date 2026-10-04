@@ -263,7 +263,7 @@ export function PickTeam({
                         </div>
                       </dl>
                       <Radar axes={radarAxes(inspected)} name={inspected.name} />
-                      <div className="mt-bars" aria-label={`${inspected.name} engine ratings`}>
+                      <div className="mt-bars" aria-label={`${inspected.name} ratings`}>
                         {RATING_LABELS.map(([key, label]) => (
                           <div key={key}>
                             <span>{label}</span>

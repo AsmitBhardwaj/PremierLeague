@@ -5,9 +5,11 @@ import { useState } from 'react';
 import { Card } from '../components/Card';
 import { LeagueTable } from './LeagueTable';
 import {
+  cleanSheets,
   ordinal,
   placesSummary,
   predictedPosition,
+  previewComparison,
   resultLetter,
   userPosition,
 } from './lib/format';
@@ -70,8 +72,18 @@ export function SeasonFinale({
   const lost = view.results.filter((r) => resultLetter(r) === 'L').length;
   const summary = placesSummary(predicted, position);
   const awards = view.awards;
+  const comparison = previewComparison(
+    view.prediction,
+    {
+      points: row.points,
+      goalsFor: row.goalsFor,
+      goalsAgainst: row.goalsAgainst,
+      cleanSheets: cleanSheets(view.results),
+    },
+    awards?.userTopScorer ?? null,
+  );
   const name = view.identity.name;
-  const shareText = `${name} finished ${ordinal(position)} with ${row.points} points in a simulated Premier League season (${won}W ${drawn}D ${lost}L). ${summary}.${
+  const shareText = `${name} finished ${ordinal(position)} with ${row.points} points in a 38-match season (${won}W ${drawn}D ${lost}L). ${summary}.${
     awards?.userTopScorer
       ? ` Top scorer: ${awards.userTopScorer.name}, ${awards.userTopScorer.goals} goals.`
       : ''
@@ -107,9 +119,18 @@ export function SeasonFinale({
       </h1>
       <p className="se-finale-places">{summary}</p>
       <p>
-        {won} won, {drawn} drawn, {lost} lost · {row.goalsFor} scored, {row.goalsAgainst} conceded ·
-        pre-season forecast about {view.prediction.meanPoints.toFixed(0)} points.
+        {won} won, {drawn} drawn, {lost} lost · {row.goalsFor} scored, {row.goalsAgainst} conceded.
       </p>
+      {comparison.length > 0 ? (
+        <Card className="se-versus" aria-label="The season against the preview">
+          <p className="card-kicker">Against the preview</p>
+          <ul>
+            {comparison.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       <Card className="se-season-card" aria-label="Season card">
         <p className="card-kicker">{name} · season card</p>

@@ -1,4 +1,5 @@
-import type { MatchRecord } from '@pl/engine';
+import type { AwardLine, MatchRecord, SeasonPrediction } from '@pl/engine';
+import { about, pointsFrom } from '../../play/lib/preview';
 import type { TableEntry } from './protocol';
 import { USER_CLUB_ID } from './setup';
 
@@ -44,4 +45,35 @@ export function placesSummary(predicted: number, finished: number): string {
       ? 'exactly as predicted'
       : `${gained > 0 ? '+' : '−'}${Math.abs(gained)} ${Math.abs(gained) === 1 ? 'place' : 'places'}`;
   return `Predicted ${ordinal(predicted)}, finished ${ordinal(finished)}: ${change}`;
+}
+
+/** Clean sheets the user's club kept in these matches. */
+export function cleanSheets(results: readonly MatchRecord[]): number {
+  return results.filter((r) => (r.home === USER_CLUB_ID ? r.awayGoals : r.homeGoals) === 0).length;
+}
+
+/**
+ * The season against the preview, in the preview's words ("Predicted ~54 goals, scored 61").
+ * Empty for a save made before the preview carried team stats.
+ */
+export function previewComparison(
+  prediction: SeasonPrediction,
+  actual: { points: number; goalsFor: number; goalsAgainst: number; cleanSheets: number },
+  topScorer: AwardLine | null,
+): string[] {
+  const stats = prediction.teamStats;
+  if (!stats) return [];
+  const lines = [
+    `Predicted ${about(pointsFrom(stats))} points, finished on ${actual.points}`,
+    `Predicted ${about(stats.goalsFor)} goals, scored ${actual.goalsFor}`,
+    `Predicted ${about(stats.goalsAgainst)} goals against, conceded ${actual.goalsAgainst}`,
+    `Predicted ${about(stats.cleanSheets)} clean sheets, kept ${actual.cleanSheets}`,
+  ];
+  const tipped = prediction.forecast?.topScorer;
+  if (tipped && topScorer) {
+    lines.push(
+      `Predicted top scorer ${tipped.name} ~${Math.round(tipped.goals)} goals; your top scorer ${topScorer.name} scored ${topScorer.goals}`,
+    );
+  }
+  return lines;
 }

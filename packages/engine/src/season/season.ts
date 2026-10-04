@@ -38,6 +38,12 @@ export interface SeasonSetup {
   /** The club a person manages; every other club (and this one, when absent) is automatic. */
   userClubId?: string;
   /**
+   * Simulate only the user's matches (the other clubs never play, so they stay fresh and never get
+   * hurt). For forecasts of the user's own season; every match the user plays is identical to the
+   * full season's apart from the opponents' season dynamics.
+   */
+  userMatchesOnly?: boolean;
+  /**
    * January-window money: the user's squad may never cost more than `budget` at these values.
    * Without it the window enforces only the squad shape.
    */
@@ -202,6 +208,7 @@ export class Season {
   readonly seed: number;
   readonly rounds: Round[];
   readonly userClubId: string | undefined;
+  private readonly userMatchesOnly: boolean;
   private clubs: ReadonlyMap<string, SeasonClubInput>;
   private readonly state = new Map<string, PlayerSeasonState>();
   private readonly rows = new Map<string, TableRow>();
@@ -216,6 +223,7 @@ export class Season {
   constructor(setup: SeasonSetup) {
     this.seed = setup.seed;
     this.userClubId = setup.userClubId;
+    this.userMatchesOnly = Boolean(setup.userMatchesOnly && setup.userClubId !== undefined);
     this.transferMarket = setup.transferMarket;
     this.clubs = new Map(setup.clubs.map((c) => [c.id, c]));
     if (this.clubs.size !== setup.clubs.length) throw new Error('club ids must be unique');
@@ -503,10 +511,11 @@ export class Season {
     let user: PendingMatchday['user'];
 
     for (const fixture of this.rounds[round]!) {
-      const homeClub = this.clubs.get(fixture.home)!;
-      const awayClub = this.clubs.get(fixture.away)!;
       const userHome = fixture.home === this.userClubId;
       const userAway = fixture.away === this.userClubId;
+      if (this.userMatchesOnly && !userHome && !userAway) continue;
+      const homeClub = this.clubs.get(fixture.home)!;
+      const awayClub = this.clubs.get(fixture.away)!;
       // No facing himself: the opponent of the user's club cannot field the user's players.
       const home = userHome
         ? this.userTeam(homeClub, none)

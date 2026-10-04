@@ -17,6 +17,7 @@ import playerData from '../play/data/players.json';
 import { buildOpponentTeams, computeReplacedClub } from '../play/lib/clubs';
 import type { ClubIdentity } from '../play/lib/persistence';
 import { createPredictionTeam, type MarketPlayer } from '../play/lib/squad';
+import { runForecast } from '../play/lib/forecast';
 import { fixtureOdds } from '../match/lib/odds';
 import type {
   MatchFinish,
@@ -180,7 +181,7 @@ function create(request: Extract<SeasonMessage, { kind: 'create' }>): void {
     starters: request.starterIds,
     tactic: 'balanced',
   });
-  const prediction = predictSeason(
+  const team = predictSeason(
     createPredictionTeam(
       'user-club',
       request.identity.name,
@@ -195,6 +196,18 @@ function create(request: Extract<SeasonMessage, { kind: 'create' }>): void {
       opponents: buildOpponentTeams(market, replaced.id, squad),
     },
   );
+  // The same player and card forecast the season preview showed (deterministic), kept in the save.
+  const prediction: SeasonPrediction = {
+    ...team,
+    forecast: runForecast(
+      market,
+      replaced.id,
+      request.identity.name,
+      squad,
+      request.starterIds,
+      request.formation,
+    ),
+  };
   career = next;
   meta = {
     identity: request.identity,

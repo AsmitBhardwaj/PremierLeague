@@ -51,8 +51,18 @@ export function validateIdentity(identity: ClubIdentity): Record<string, string>
   if (!/^[A-Za-z0-9]{2,4}$/.test(identity.shortName.trim())) {
     errors.shortName = 'Use 2–4 letters or numbers.';
   }
-  if (!identity.stadium.trim()) errors.stadium = 'Enter a stadium name.';
   return errors;
+}
+
+/** An earlier build suggested this default; it is treated as "no name chosen". */
+const RETIRED_DEFAULT_STADIUM = 'Final Third Ground';
+
+/** The chosen stadium name, or "[Club name] Stadium" when none was typed. */
+export function stadiumName(identity: Pick<ClubIdentity, 'name' | 'stadium'>): string {
+  const typed = identity.stadium.trim();
+  if (typed && typed !== RETIRED_DEFAULT_STADIUM) return typed;
+  const club = identity.name.trim();
+  return club ? `${club} Stadium` : 'Your stadium';
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

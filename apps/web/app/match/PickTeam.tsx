@@ -20,6 +20,7 @@ import type { Venue } from './lib/seed';
 import { TACTICS } from './lib/tactics';
 import type { PlaybackMode } from './lib/timeline';
 import { MODES } from './MatchViewer';
+import { ClubBadge, positionEdge } from '../components/ClubBadge';
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 const statusLabel = (status: string) =>
@@ -194,15 +195,15 @@ export function PickTeam({
                         <button
                           key={player.id}
                           type="button"
-                          className={swapSourcePosition === player.position ? 'compatible' : ''}
+                          className={`${positionEdge(player.position)} ${
+                            swapSourcePosition === player.position ? 'compatible' : ''
+                          }`}
                           onClick={() => chooseSubstitute(player)}
                         >
-                          <span className={`mt-chip pos-${player.position.toLowerCase()}`}>
-                            {player.position}
-                          </span>
+                          <ClubBadge code={player.clubShortName} small />
                           <strong>{player.name}</strong>
                           <small>
-                            {player.overall}
+                            {player.position} · {player.overall}
                             {season && (season.status(player.id)?.outFor ?? 0) > 0
                               ? ` · Out ${season.status(player.id)!.outFor}`
                               : ''}

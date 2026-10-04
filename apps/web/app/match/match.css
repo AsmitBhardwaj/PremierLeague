@@ -298,10 +298,12 @@
 .mt-bench button {
   min-width: 0;
   min-height: 76px;
-  padding: 8px;
+  padding: 8px 8px 8px 14px;
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   justify-items: start;
-  gap: 4px;
+  gap: 2px 8px;
   background: var(--chip);
   border: 2px solid transparent;
   text-align: left;

@@ -26,6 +26,7 @@ import {
 } from './lib/squad';
 import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
+import { ClubBadge, positionEdge } from '../components/ClubBadge';
 import {
   STORAGE_KEY,
   emptyIdentity,
@@ -390,14 +391,16 @@ function SquadStep({
             {filtered.map((player) => {
               const block = obviousBlock(player);
               return (
-                <div className="player-row" role="listitem" key={player.id}>
-                  <span className={`position-chip position-${player.position.toLowerCase()}`}>
-                    {player.position}
-                  </span>
+                <div
+                  className={`player-row ${positionEdge(player.position)}`}
+                  role="listitem"
+                  key={player.id}
+                >
+                  <ClubBadge code={player.clubShortName} />
                   <span className="player-name">
                     <strong>{player.name}</strong>
                     <small>
-                      {player.clubName} · {statusLabel(player.status)}
+                      {player.position} · {player.clubName} · {statusLabel(player.status)}
                     </small>
                   </span>
                   <span className="player-rating">{player.overall}</span>
@@ -441,9 +444,15 @@ function SquadStep({
               {selected
                 .filter((player) => player.position === item)
                 .map((player) => (
-                  <button key={player.id} type="button" onClick={() => remove(player)}>
+                  <button
+                    key={player.id}
+                    type="button"
+                    className={positionEdge(player.position)}
+                    onClick={() => remove(player)}
+                    aria-label={`Remove ${player.name}, ${player.position}, ${player.clubName}`}
+                  >
+                    <ClubBadge code={player.clubShortName} small />
                     <span>{player.name}</span>
-                    <small>{player.clubShortName}</small>
                     <strong>{money(player.value)}</strong>
                     <span aria-hidden="true">×</span>
                   </button>
@@ -588,18 +597,16 @@ function LineupStep({
                     setInspectedId(player.id);
                     swap(player);
                   }}
-                  className={
+                  className={`${positionEdge(player.position)} ${
                     swapSource &&
                     squad.find((item) => item.id === swapSource)?.position === player.position
                       ? 'compatible'
                       : ''
-                  }
+                  }`}
                 >
-                  <span className={`position-${player.position.toLowerCase()}`}>
-                    {player.position}
-                  </span>
+                  <ClubBadge code={player.clubShortName} small />
                   <strong>{player.name}</strong>
-                  <small>{player.clubShortName}</small>
+                  <small>{player.position}</small>
                 </button>
               ))}
             </div>

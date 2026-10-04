@@ -9,6 +9,7 @@
     "hello": "tsx src/hello.ts",
     "calibrate": "tsx src/calibrate.ts",
     "calibrate-season": "tsx src/calibrate-season.ts",
+    "diagnose-scorers": "tsx src/diagnose-scorers.ts",
     "fit-surrogate": "tsx src/fit-surrogate.ts",
     "generate-season-background": "tsx src/generate-season-background.ts",
     "generate-web-player-data": "tsx src/generate-web-player-data.ts",

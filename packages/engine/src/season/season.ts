@@ -8,6 +8,8 @@ import type {
   Player,
   PlayerRatings,
   Position,
+  Side,
+  SideChanges,
   Tactic,
   Team,
 } from '../types';
@@ -63,6 +65,24 @@ export interface MatchdayOutcome {
   records: MatchRecord[];
   /** The full engine result of the user's match, when a user club is set. */
   userMatch?: { fixture: Fixture; result: MatchResult };
+}
+
+/** A matchday whose first halves are played, waiting on the user's half-time decisions. */
+export interface PendingMatchday {
+  readonly round: number;
+  /** Present when a user club is set: the paused match and the sides as fielded. */
+  readonly user?: {
+    fixture: Fixture;
+    home: Team;
+    away: Team;
+    userSide: Side;
+    snapshot: MatchSnapshot;
+  };
+  /** Apply the user's half-time changes (season player ids) and play every match to full time. */
+  finish(
+    changes?: SideChanges,
+    onMatch?: (fixture: Fixture, result: MatchResult) => void,
+  ): MatchdayOutcome;
 }
 
 export interface PlayMatchdayOptions {
@@ -165,6 +185,7 @@ export class Season {
   private readonly records: MatchRecord[] = [];
   private lineup: UserLineup | undefined;
   private nextRound = 0;
+  private pending: PendingMatchday | undefined;
 
   constructor(setup: SeasonSetup) {
     this.seed = setup.seed;
@@ -406,23 +427,34 @@ export class Season {
 
   /** Play every match of the next round with the full event engine. */
   playMatchday(options: PlayMatchdayOptions = {}): MatchdayOutcome {
+    const pending = this.beginMatchday();
+    const changes = pending.user ? options.halfTime?.(pending.user.snapshot) : undefined;
+    return pending.finish(changes ? changes[pending.user!.userSide] : undefined, options.onMatch);
+  }
+
+  /**
+   * First half of every match in the next round. The user's match is paused at half-time so a
+   * person can watch it and decide; `finish` applies their changes and plays everything out.
+   * Nothing is recorded until `finish`.
+   */
+  beginMatchday(): PendingMatchday {
     if (this.finished) throw new Error('the season is over');
+    if (this.pending) throw new Error('a matchday is already in progress');
     const round = this.nextRound;
-    const records: MatchRecord[] = [];
-    let userMatch: MatchdayOutcome['userMatch'];
     const userSquadIds = new Set(
       this.userClubId === undefined
         ? []
         : this.clubs.get(this.userClubId)!.players.map((p) => p.id),
     );
-    const results: { fixture: Fixture; match: Match; result: MatchResult }[] = [];
+    const none: ReadonlySet<string> = new Set();
+    const played: { fixture: Fixture; match: Match; userSide?: Side }[] = [];
+    let user: PendingMatchday['user'];
 
     for (const fixture of this.rounds[round]!) {
       const homeClub = this.clubs.get(fixture.home)!;
       const awayClub = this.clubs.get(fixture.away)!;
       const userHome = fixture.home === this.userClubId;
       const userAway = fixture.away === this.userClubId;
-      const none: ReadonlySet<string> = new Set();
       // No facing himself: the opponent of the user's club cannot field the user's players.
       const home = userHome
         ? this.userTeam(homeClub, none)
@@ -446,34 +478,77 @@ export class Season {
         startStamina,
       });
       match.playFirstHalf();
-      if (userHome || userAway) {
-        const changes = options.halfTime?.(match.snapshot());
-        if (changes) {
-          match.applyHalfTime(userHome ? { home: changes.home } : { away: changes.away });
-        }
-      }
-      const result = match.playSecondHalf();
-      results.push({ fixture, match, result });
-      if (userHome || userAway) userMatch = { fixture, result };
+      const userSide: Side | undefined = userHome ? 'home' : userAway ? 'away' : undefined;
+      played.push({ fixture, match, userSide });
+      if (userSide) user = { fixture, home, away, userSide, snapshot: match.snapshot() };
     }
 
-    for (const { fixture, match, result } of results) {
-      records.push({
-        round,
-        home: fixture.home,
-        away: fixture.away,
-        homeGoals: result.score.home,
-        awayGoals: result.score.away,
+    const finish: PendingMatchday['finish'] = (changes, onMatch) => {
+      if (this.pending !== handle) throw new Error('this matchday is no longer in progress');
+      const records: MatchRecord[] = [];
+      let userMatch: MatchdayOutcome['userMatch'];
+      const results = played.map(({ fixture, match, userSide }) => {
+        if (userSide && changes) match.applyHalfTime({ [userSide]: changes });
+        const result = match.playSecondHalf();
+        if (userSide) userMatch = { fixture, result };
+        return { fixture, match, result };
       });
-      addResult(this.rows.get(fixture.home)!, result.score.home, result.score.away);
-      addResult(this.rows.get(fixture.away)!, result.score.away, result.score.home);
-      this.absorb(round, match.snapshot(), result);
-      options.onMatch?.(fixture, result);
-    }
-    this.records.push(...records);
-    this.endMatchday();
-    this.nextRound++;
-    return userMatch ? { round, records, userMatch } : { round, records };
+      for (const { fixture, match, result } of results) {
+        records.push({
+          round,
+          home: fixture.home,
+          away: fixture.away,
+          homeGoals: result.score.home,
+          awayGoals: result.score.away,
+        });
+        addResult(this.rows.get(fixture.home)!, result.score.home, result.score.away);
+        addResult(this.rows.get(fixture.away)!, result.score.away, result.score.home);
+        this.absorb(round, match.snapshot(), result);
+        onMatch?.(fixture, result);
+      }
+      this.records.push(...records);
+      this.endMatchday();
+      this.nextRound++;
+      this.pending = undefined;
+      return userMatch ? { round, records, userMatch } : { round, records };
+    };
+    const handle: PendingMatchday = user ? { round, user, finish } : { round, finish };
+    this.pending = handle;
+    return handle;
+  }
+
+  /** Forget a matchday begun but not finished; nothing was recorded. */
+  abandonMatchday(): void {
+    this.pending = undefined;
+  }
+
+  /** The side a club would field against the user's club now (without the user's players). */
+  opponentPreview(clubId: string): Team {
+    const club = this.clubs.get(clubId);
+    if (!club) throw new Error(`unknown club ${clubId}`);
+    const owned =
+      this.userClubId === undefined
+        ? new Set<string>()
+        : new Set(this.clubs.get(this.userClubId)!.players.map((p) => p.id));
+    return this.aiTeam(club, owned);
+  }
+
+  /** The side a club would field today against anyone else, for projections. */
+  nominalTeam(clubId: string): Team {
+    const club = this.clubs.get(clubId);
+    if (!club) throw new Error(`unknown club ${clubId}`);
+    return clubId === this.userClubId
+      ? this.userTeam(club, new Set())
+      : this.aiTeam(club, new Set());
+  }
+
+  clubIds(): string[] {
+    return [...this.clubs.keys()];
+  }
+
+  /** Raw (un-namespaced) squad of a club. */
+  squadOf(clubId: string): readonly Player[] {
+    return this.clubs.get(clubId)?.players ?? [];
   }
 
   /** Fold one match into fitness, form, injuries, suspensions and player stats. */

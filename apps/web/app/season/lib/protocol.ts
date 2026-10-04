@@ -52,7 +52,10 @@ export interface SeasonView {
   prediction: SeasonPrediction;
   identity: ClubIdentity;
   replacedClubId: string;
+  /** The user's current squad (the initial one, less any January swaps). */
   squadIds: string[];
+  /** January window: swaps made and how long real players are out (only players still out). */
+  window: { transfersMade: number; maxTransfers: number; outFor: Record<string, number> };
   /**
    * A match already decided in the log: playback resumes here and never returns to decisions.
    * `first_half`: kicked off, half-time still to decide. `second_half`: the result is fixed, only
@@ -106,6 +109,8 @@ export type SeasonRequest =
   /** The person has been shown the last watched result. */
   | { kind: 'ack' }
   | { kind: 'sim'; to: 'next' | 'january' | 'end' }
+  /** January window: sell `out`, sign `in` (a same-position swap). */
+  | { kind: 'transfer'; out: string; in: string }
   | { kind: 'closeWindow' };
 
 export type SeasonResponse =

@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import playerData from '../../play/data/players.json';
 import { balancedBuild } from '../../play/lib/budget-helpers';
 import { computeReplacedClub } from '../../play/lib/clubs';
-import { pickFormationXI, type MarketPlayer } from '../../play/lib/squad';
+import {
+  SQUAD_BUDGET,
+  pickFormationXI,
+  squadCost,
+  validateSquad,
+  type MarketPlayer,
+} from '../../play/lib/squad';
 import { USER_CLUB_ID, buildSetup, marketDataVersion } from './setup';
 
 const market = playerData as MarketPlayer[];
@@ -54,5 +60,93 @@ describe('season setup from the real market', () => {
 
   it('has a stable data version', () => {
     expect(marketDataVersion(market)).toBe(marketDataVersion(market));
+  });
+
+  describe('January window with real values', () => {
+    const byId = new Map(market.map((p) => [p.id, p]));
+    const owned = new Set(squad.map((p) => p.id));
+    const current = (career: Career) => career.squad().map((p) => byId.get(p.id)!);
+    /** A market player in the position the squad has room for under all rules, cheaper or equal. */
+    const swapFor = (career: Career, out: MarketPlayer, nth = 0) =>
+      market
+        .filter((p) => p.position === out.position && !current(career).some((s) => s.id === p.id))
+        .filter((p) => {
+          const next = current(career).filter((s) => s.id !== out.id);
+          return validateSquad([...next, p]).length === 0;
+        })
+        .sort((a, b) => b.value - a.value)
+        .filter((p) => p.value <= out.value + (SQUAD_BUDGET - squadCost(current(career))))[nth]!;
+    const atWindow = () => {
+      const career = new Career(buildSetup(market, replaced.id, 'Test FC', squad, 11));
+      career.apply({ type: 'lineup', formation: '4-4-2', starters, tactic: 'balanced' });
+      career.apply({ type: 'sim', to: 'january' });
+      return career;
+    };
+
+    it('keep every squad rule through three swaps and refuse a fourth', () => {
+      const career = atWindow();
+      const outs = ['DEF', 'MID', 'FWD'].map((pos) => squad.find((p) => p.position === pos)!);
+      for (const out of outs) {
+        const target = swapFor(career, out);
+        career.apply({ type: 'transfer', out: out.id, in: target.id });
+        const next = current(career);
+        expect(validateSquad(next)).toEqual([]);
+        expect(squadCost(next)).toBeLessThanOrEqual(SQUAD_BUDGET);
+      }
+      expect(career.transfersMade).toBe(3);
+      const gk = squad.find((p) => p.position === 'GK')!;
+      expect(() =>
+        career.apply({ type: 'transfer', out: gk.id, in: swapFor(career, gk).id }),
+      ).toThrow(/3 transfers/);
+    });
+
+    it('refuse a signing that costs more than the cash available', () => {
+      const career = atWindow();
+      const out = squad.filter((p) => p.position === 'MID').sort((a, b) => a.value - b.value)[0]!;
+      const cash = SQUAD_BUDGET - squadCost(current(career));
+      const tooDear = market
+        .filter((p) => p.position === 'MID' && !owned.has(p.id) && p.value > out.value + cash)
+        .sort((a, b) => a.value - b.value)[0];
+      expect(tooDear).toBeDefined();
+      expect(() => career.apply({ type: 'transfer', out: out.id, in: tooDear!.id })).toThrow(
+        /over budget/,
+      );
+    });
+
+    it('can sign a player of the replaced club', () => {
+      const career = atWindow();
+      const out = squad.find((p) => p.position === 'DEF')!;
+      const target = market
+        .filter(
+          (p) =>
+            p.clubShortName === replaced.id &&
+            p.position === 'DEF' &&
+            !owned.has(p.id) &&
+            validateSquad([...current(career).filter((s) => s.id !== out.id), p]).length === 0,
+        )
+        .sort((a, b) => a.value - b.value)[0];
+      expect(target).toBeDefined();
+      career.apply({ type: 'transfer', out: out.id, in: target!.id });
+      expect(career.squad().some((p) => p.id === target!.id)).toBe(true);
+    });
+
+    it('replay to the same season from the seed and the log', () => {
+      const run = () => {
+        const career = atWindow();
+        const out = squad.find((p) => p.position === 'MID')!;
+        career.apply({ type: 'transfer', out: out.id, in: swapFor(career, out).id });
+        career.apply({ type: 'closeWindow' });
+        career.apply({ type: 'sim', to: 'end' });
+        return career;
+      };
+      const live = run();
+      const replayed = new Career(
+        buildSetup(market, replaced.id, 'Test FC', squad, 11),
+        live.decisions,
+      );
+      expect(replayed.season.table()).toEqual(live.season.table());
+      expect(replayed.squad().map((p) => p.id)).toEqual(live.squad().map((p) => p.id));
+      expect(run().season.table()).toEqual(live.season.table());
+    }, 120_000);
   });
 });

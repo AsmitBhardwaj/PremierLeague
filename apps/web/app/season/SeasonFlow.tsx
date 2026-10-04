@@ -14,6 +14,7 @@ import { listClubs } from '../play/lib/clubs';
 import { STORAGE_KEY, parseSavedFlow, type ClubIdentity } from '../play/lib/persistence';
 import { validateLineup, type Formation, type MarketPlayer } from '../play/lib/squad';
 import { Hub } from './Hub';
+import { TransferWindow } from './Window';
 import { LeagueTable } from './LeagueTable';
 import { ProjectionPanel } from './Projection';
 import { SeasonClient } from './lib/client';
@@ -603,33 +604,28 @@ export function SeasonFlow() {
       ) : null}
 
       {stage === 'window' ? (
-        <section className="se-window page-shell" aria-labelledby="se-window-title">
-          <p className="mt-kicker">Halfway point · matchday 20 played</p>
-          <h1 id="se-window-title">January window</h1>
-          <p>
-            Window coming soon — continue. Transfers are not open yet, so the season carries on with
-            the squad you have.
-          </p>
-          <div className="se-actions">
-            <button
-              type="button"
-              className="button button-primary button-default"
-              disabled={busy}
-              onClick={() =>
-                void run(async (client) => {
-                  const response = await client.send({ kind: 'closeWindow' });
-                  settle(response.view);
-                })
-              }
-            >
-              Continue the season <span aria-hidden="true">→</span>
-            </button>
-          </div>
-          <div className="se-after">
-            <LeagueTable table={view.table} names={names} />
-            <ProjectionPanel projection={view.projection} prediction={view.prediction} />
-          </div>
-        </section>
+        <TransferWindow
+          view={view}
+          names={names}
+          squad={squad}
+          busy={busy}
+          onTransfer={(out, signing) =>
+            void run(async (client) => {
+              const response = await client.send({
+                kind: 'transfer',
+                out: out.id,
+                in: signing.id,
+              });
+              settle(response.view);
+            })
+          }
+          onClose={() =>
+            void run(async (client) => {
+              const response = await client.send({ kind: 'closeWindow' });
+              settle(response.view);
+            })
+          }
+        />
       ) : null}
 
       {stage === 'finished' ? (

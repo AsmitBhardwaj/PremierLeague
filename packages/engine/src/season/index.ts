@@ -19,6 +19,8 @@ export {
 export {
   Career,
   WINDOW_AFTER_ROUND,
+  MAX_TRANSFERS,
+  MAX_PER_CLUB,
   type Decision,
   type HalfTimeDecision,
   type PendingPlay,

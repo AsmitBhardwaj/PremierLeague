@@ -16,6 +16,10 @@ import { sortTable, type TableRow } from './table';
 
 /** The January window opens once, after this many matchdays have been played. */
 export const WINDOW_AFTER_ROUND = 20;
+/** Most swaps (a sale plus a purchase) the January window allows. */
+export const MAX_TRANSFERS = 3;
+/** No more than this many of the user's players from one real club. */
+export const MAX_PER_CLUB = 3;
 
 /** Half-time changes as logged: raw player ids from the user's squad. */
 export interface HalfTimeDecision {
@@ -178,13 +182,43 @@ export class Career {
         break;
       }
       case 'transfer':
-        throw new Error('The January window is not available yet');
+        this.requirePhase('window');
+        this.swap(decision.out, decision.in);
+        break;
       case 'closeWindow':
         this.requirePhase('window');
         this.windowClosed = true;
         break;
     }
     this.decisions.push(decision);
+  }
+
+  /** Sell `outId` and sign `inId` in his position, or throw with the rule that stops it. */
+  private swap(outId: string, inId: string): void {
+    if (this.transfersMade >= MAX_TRANSFERS) {
+      throw new Error(`The window allows ${MAX_TRANSFERS} transfers.`);
+    }
+    const squad = this.season.squadOf(this.userClubId);
+    const sold = squad.find((p) => p.id === outId);
+    if (!sold) throw new Error('That player is not in your squad.');
+    if (squad.some((p) => p.id === inId)) throw new Error('That player is already in your squad.');
+    const target = this.season.findSignable(inId);
+    if (!target) throw new Error('That player is not on the market.');
+    if (target.player.position !== sold.position) {
+      throw new Error(`A transfer must be a ${sold.position} for a ${sold.position}.`);
+    }
+    const clubOf = (id: string) => this.season.findSignable(id)?.clubId;
+    const fromClub = squad.filter((p) => p.id !== outId && clubOf(p.id) === target.clubId).length;
+    if (fromClub >= MAX_PER_CLUB) {
+      throw new Error(`You already have ${MAX_PER_CLUB} players from that club.`);
+    }
+    const market = this.season.transferMarket;
+    if (market) {
+      const value = (id: string) => market.values[id] ?? 0;
+      const cost = squad.reduce((sum, p) => sum + value(p.id), 0) - value(outId) + value(inId);
+      if (cost > market.budget + 1e-9) throw new Error('That signing is over budget.');
+    }
+    this.season.swapUserPlayer(outId, target.player, target.clubId);
   }
 
   private setLineup(decision: { formation: string; starters: string[]; tactic: Tactic }): void {
@@ -219,6 +253,11 @@ export class Career {
   /** The user's most recent match played through kick-off and half-time, with its full result. */
   get lastWatched(): WatchedMatch | undefined {
     return this.watched;
+  }
+
+  /** Swaps made in the January window so far. */
+  get transfersMade(): number {
+    return this.decisions.filter((d) => d.type === 'transfer').length;
   }
 
   get inProgress(): PendingPlay | undefined {

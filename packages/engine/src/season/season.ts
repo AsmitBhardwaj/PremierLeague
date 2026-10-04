@@ -37,6 +37,16 @@ export interface SeasonSetup {
   clubs: readonly SeasonClubInput[];
   /** The club a person manages; every other club (and this one, when absent) is automatic. */
   userClubId?: string;
+  /**
+   * January-window money: the user's squad may never cost more than `budget` at these values.
+   * Without it the window enforces only the squad shape.
+   */
+  transferMarket?: {
+    budget: number;
+    values: Readonly<Record<string, number>>;
+    /** Players of real clubs that are not in the league (the replaced club): signable, never injured. */
+    outside?: readonly { clubId: string; players: readonly Player[] }[];
+  };
 }
 
 /** Per-player season state, tracked per club copy. */
@@ -184,12 +194,14 @@ export class Season {
   private readonly rows = new Map<string, TableRow>();
   private readonly records: MatchRecord[] = [];
   private lineup: UserLineup | undefined;
+  readonly transferMarket: SeasonSetup['transferMarket'];
   private nextRound = 0;
   private pending: PendingMatchday | undefined;
 
   constructor(setup: SeasonSetup) {
     this.seed = setup.seed;
     this.userClubId = setup.userClubId;
+    this.transferMarket = setup.transferMarket;
     this.clubs = new Map(setup.clubs.map((c) => [c.id, c]));
     if (this.clubs.size !== setup.clubs.length) throw new Error('club ids must be unique');
     if (this.userClubId !== undefined && !this.clubs.has(this.userClubId)) {
@@ -259,31 +271,51 @@ export class Season {
     this.lineup = lineup;
   }
 
-  /** The user's squad changes (January window); injury and form carry with the player id. */
-  replaceUserSquad(players: readonly Player[]): void {
+  /** A player of any club other than the user's, with the club that holds him. */
+  findSignable(playerId: string): { player: Player; clubId: string } | undefined {
+    for (const club of this.clubs.values()) {
+      if (club.id === this.userClubId) continue;
+      const player = club.players.find((p) => p.id === playerId);
+      if (player) return { player, clubId: club.id };
+    }
+    for (const club of this.transferMarket?.outside ?? []) {
+      const player = club.players.find((p) => p.id === playerId);
+      if (player) return { player, clubId: club.clubId };
+    }
+    return undefined;
+  }
+
+  /**
+   * January window: swap one of the user's players for another. The signing arrives with the
+   * fitness, form and absence his real club's copy has today; the sold player's state is dropped.
+   * The user's lineup keeps its shape: the new player takes the sold player's slot.
+   */
+  swapUserPlayer(outId: string, incoming: Player, fromClubId: string): void {
     const id = this.userClubId;
     if (id === undefined) throw new Error('this season has no user club');
     const club = this.clubs.get(id)!;
-    const keep = new Set(players.map((p) => p.id));
-    for (const p of club.players) {
-      if (!keep.has(p.id)) this.state.delete(seasonPlayerId(id, p.id));
+    this.state.delete(seasonPlayerId(id, outId));
+    const source = this.state.get(seasonPlayerId(fromClubId, incoming.id));
+    this.state.set(seasonPlayerId(id, incoming.id), {
+      fitness: source?.fitness ?? 100,
+      form: source?.form ?? 0,
+      injuredFor: source?.injuredFor ?? 0,
+      suspendedFor: source?.suspendedFor ?? 0,
+      appearances: 0,
+      goals: 0,
+      assists: 0,
+      ratingSum: 0,
+    });
+    this.clubs = new Map(this.clubs).set(id, {
+      ...club,
+      players: club.players.map((p) => (p.id === outId ? incoming : p)),
+    });
+    if (this.lineup) {
+      this.lineup = {
+        ...this.lineup,
+        starters: this.lineup.starters.map((s) => (s === outId ? incoming.id : s)),
+      };
     }
-    for (const p of players) {
-      const key = seasonPlayerId(id, p.id);
-      if (!this.state.has(key)) {
-        this.state.set(key, {
-          fitness: 100,
-          form: 0,
-          injuredFor: 0,
-          suspendedFor: 0,
-          appearances: 0,
-          goals: 0,
-          assists: 0,
-          ratingSum: 0,
-        });
-      }
-    }
-    this.clubs = new Map(this.clubs).set(id, { ...club, players });
   }
 
   // -------------------------------------------------------------- selection

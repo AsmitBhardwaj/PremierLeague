@@ -2,6 +2,7 @@
 
 import {
   Career,
+  MAX_TRANSFERS,
   type Tactic,
   cacheOf,
   hashSeed,
@@ -93,6 +94,17 @@ function buildResume(): SeasonView['resume'] {
   return null;
 }
 
+/** How many matches each real player is out for, while the window is open. */
+function outForMarket(): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!career || career.phase !== 'window') return out;
+  for (const p of market) {
+    const n = career.season.outFor(p.clubShortName, p.id);
+    if (n > 0) out[p.id] = n;
+  }
+  return out;
+}
+
 function buildView(): SeasonView {
   if (!career || !meta) throw new Error('no season loaded');
   // Before the first matchday every club is level, so there is nothing to move from.
@@ -144,7 +156,12 @@ function buildView(): SeasonView {
     prediction: meta.prediction,
     identity: meta.identity,
     replacedClubId: meta.replacedClubId,
-    squadIds: meta.squadIds,
+    squadIds: career.squad().map((p) => p.id),
+    window: {
+      transfersMade: career.transfersMade,
+      maxTransfers: MAX_TRANSFERS,
+      outFor: outForMarket(),
+    },
     resume: buildResume(),
     save,
   };
@@ -253,6 +270,8 @@ function handle(message: SeasonMessage): Omit<Extract<SeasonResponse, { ok: true
         if (career.lastWatched) meta.revealed = Math.max(meta.revealed, career.lastWatched.round);
       } else if (message.kind === 'sim') {
         career.apply({ type: 'sim', to: message.to });
+      } else if (message.kind === 'transfer') {
+        career.apply({ type: 'transfer', out: message.out, in: message.in });
       } else if (message.kind === 'closeWindow') {
         career.apply({ type: 'closeWindow' });
       }

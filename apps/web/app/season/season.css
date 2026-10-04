@@ -328,3 +328,59 @@
   line-height: 1;
   text-transform: uppercase;
 }
+
+.se-window-stats {
+  margin-top: 20px;
+}
+
+.se-window-layout {
+  margin-top: 24px;
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .se-window-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+
+.se-squad-group {
+  max-height: none;
+  margin-top: 0;
+  border-top: 0;
+}
+
+.se-window-market h2 {
+  margin: 6px 0 16px;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.se-swap {
+  margin-top: 20px;
+  padding: 18px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+}
+
+.se-swap-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+
+.se-swap-hint {
+  margin-top: 20px;
+  color: var(--text-muted);
+}
+
+.se-window-squad .player-row,
+.se-window-market .player-row {
+  grid-template-columns: 40px minmax(0, 1fr) 40px 64px 92px;
+}

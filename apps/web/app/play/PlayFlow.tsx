@@ -27,7 +27,7 @@ import {
 import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
-import { matchesName } from './lib/search';
+import { MarketList } from '../components/MarketList';
 import {
   STORAGE_KEY,
   emptyIdentity,
@@ -250,10 +250,6 @@ function SquadStep({
   onBack: () => void;
   onContinue: () => void;
 }) {
-  const [search, setSearch] = useState('');
-  const [position, setPosition] = useState('ALL');
-  const [club, setClub] = useState('ALL');
-  const [sort, setSort] = useState('value-desc');
   const [message, setMessage] = useState('');
   const selectedIds = useMemo(() => new Set(selected.map((player) => player.id)), [selected]);
   const counts = positionCounts(selected);
@@ -268,22 +264,6 @@ function SquadStep({
     }
     return [...usage.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [selected]);
-  const clubs = useMemo(() => [...new Set(market.map((player) => player.clubName))].sort(), []);
-  const filtered = useMemo(() => {
-    return market
-      .filter(
-        (player) =>
-          matchesName(player.name, search) &&
-          (position === 'ALL' || player.position === position) &&
-          (club === 'ALL' || player.clubName === club),
-      )
-      .sort((a, b) => {
-        if (sort === 'value-desc') return b.value - a.value || a.name.localeCompare(b.name);
-        if (sort === 'rating-desc') return b.overall - a.overall || a.name.localeCompare(b.name);
-        if (sort === 'name') return a.name.localeCompare(b.name);
-        return a.value - b.value || a.name.localeCompare(b.name);
-      });
-  }, [club, position, search, sort]);
 
   const add = (player: MarketPlayer) => {
     const assessment = assessSelection(player, selected, market);
@@ -345,85 +325,29 @@ function SquadStep({
       </div>
       <div className="squad-layout">
         <Card className="market-card">
-          <div className="market-filters">
-            <label className="field market-search">
-              <span>Search players</span>
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Player name"
-              />
-            </label>
-            <label className="field">
-              <span>Position</span>
-              <select value={position} onChange={(event) => setPosition(event.target.value)}>
-                <option value="ALL">All positions</option>
-                {POSITION_ORDER.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Real club</span>
-              <select value={club} onChange={(event) => setClub(event.target.value)}>
-                <option value="ALL">All clubs</option>
-                {clubs.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Sort</span>
-              <select value={sort} onChange={(event) => setSort(event.target.value)}>
-                <option value="value-desc">Value: high to low</option>
-                <option value="value-asc">Value: low to high</option>
-                <option value="rating-desc">Rating: high to low</option>
-                <option value="name">Name</option>
-              </select>
-            </label>
-          </div>
-          <div
-            className="player-list"
-            role="list"
-            aria-label={`${filtered.length} matching players`}
-          >
-            {filtered.map((player) => {
+          <MarketList
+            players={market}
+            action={(player) => {
               const block = obviousBlock(player);
               return (
-                <div
-                  className={`player-row ${positionEdge(player.position)}`}
-                  role="listitem"
-                  key={player.id}
+                <button
+                  type="button"
+                  className={`row-action ${block && !selectedIds.has(player.id) ? 'blocked' : ''}`}
+                  onClick={() => (selectedIds.has(player.id) ? remove(player) : add(player))}
+                  aria-label={
+                    selectedIds.has(player.id)
+                      ? `Remove ${player.name}`
+                      : block
+                        ? `${player.name} blocked: ${block}`
+                        : `Add ${player.name}`
+                  }
+                  title={block || `Add ${player.name}`}
                 >
-                  <ClubBadge code={player.clubShortName} />
-                  <span className="player-name">
-                    <strong>{player.name}</strong>
-                    <small>
-                      {player.position} · {player.clubName} · {statusLabel(player.status)}
-                    </small>
-                  </span>
-                  <span className="player-rating">{player.overall}</span>
-                  <span className="player-value">{money(player.value)}</span>
-                  <button
-                    type="button"
-                    className={`row-action ${block && !selectedIds.has(player.id) ? 'blocked' : ''}`}
-                    onClick={() => (selectedIds.has(player.id) ? remove(player) : add(player))}
-                    aria-label={
-                      selectedIds.has(player.id)
-                        ? `Remove ${player.name}`
-                        : block
-                          ? `${player.name} blocked: ${block}`
-                          : `Add ${player.name}`
-                    }
-                    title={block || `Add ${player.name}`}
-                  >
-                    {selectedIds.has(player.id) ? 'Remove' : block || 'Add'}
-                  </button>
-                </div>
+                  {selectedIds.has(player.id) ? 'Remove' : block || 'Add'}
+                </button>
               );
-            })}
-          </div>
+            }}
+          />
         </Card>
         <Card className="selected-card">
           <div className="selected-heading">

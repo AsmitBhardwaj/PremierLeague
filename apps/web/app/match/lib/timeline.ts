@@ -7,8 +7,11 @@ export type LineupTeam = Pick<Team, 'id' | 'name' | 'formation'> & {
 
 export type PlaybackMode = 'highlights' | 'commentary' | 'instant';
 
-/** A full match plays back in at most 20 seconds: 10 per half, half-time pause excluded. */
-export const HALF_BUDGET_MS = 10_000;
+/**
+ * A full match plays back in at most 30 seconds at ×1: 15 per half, half-time pause excluded.
+ * The speed toggle (×2) only runs this clock faster, so a match then takes at most 15 seconds.
+ */
+export const HALF_BUDGET_MS = 15_000;
 export const MATCH_BUDGET_MS = HALF_BUDGET_MS * 2;
 /** Shots at or above this xG are "big chances" (about the top quarter of shots). */
 export const BIG_CHANCE_XG = 0.17;

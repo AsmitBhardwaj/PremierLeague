@@ -38,7 +38,7 @@ describe('landing-page sample match', () => {
     expect(file.away.name).toBe('Brighton');
   });
 
-  it('has at least two goals, a score matching its goal events, and loops within 20 seconds', () => {
+  it('has at least two goals, a score matching its goal events, and loops within 30 seconds', () => {
     expect(file.score.home + file.score.away).toBeGreaterThanOrEqual(2);
     expect(scoreAt(file.events, file.home.id)).toEqual(file.score);
     expect(buildSchedule(file.events, MATCH_BUDGET_MS).totalMs).toBeLessThanOrEqual(

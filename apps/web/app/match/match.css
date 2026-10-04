@@ -1080,6 +1080,10 @@
   color: var(--cream);
 }
 
+.mv-speed {
+  flex-wrap: nowrap;
+}
+
 .mv-pause:disabled {
   opacity: 0.45;
   cursor: default;

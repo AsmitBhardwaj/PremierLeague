@@ -63,7 +63,7 @@ const careerSteps = [
   },
   {
     title: 'Play the full season',
-    text: 'Watch 20-second matches, make half-time changes and climb a live league table through all 38 games, with injuries and a January window.',
+    text: 'Watch 30-second matches, make half-time changes and climb a live league table through all 38 games, with injuries and a January window.',
     accent: 'fwd',
   },
 ] as const;
@@ -204,7 +204,7 @@ const matchdayFeatures = [
     title: 'Set tactics',
     text: 'Balanced, high press, counter or defensive, each with a real trade-off.',
   },
-  { title: '20-second matches', text: 'Highlights, text commentary or an instant result.' },
+  { title: '30-second matches', text: 'Highlights, text commentary or an instant result.' },
   {
     title: 'Half-time changes',
     text: 'Make substitutions and switch tactic before the second half.',
@@ -392,7 +392,7 @@ export default function Home() {
             <span className="segment-tag coming-tag">Highlights</span>
             <h2>Watch every match.</h2>
             <p>
-              Pick your XI, set your tactics, and watch each match play out in 20 seconds. Make your
+              Pick your XI, set your tactics, and watch each match play out in 30 seconds. Make your
               changes at half-time, then see it through to full time. Play all 38 matches with a
               live league table, injuries to cover for and a January window to fix your squad.
             </p>

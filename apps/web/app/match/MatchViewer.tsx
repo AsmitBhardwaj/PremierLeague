@@ -4,6 +4,7 @@ import type { MatchEvent, Side, Team } from '@pl/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHighlightsPitch } from './components/useHighlightsPitch';
 import { userDotColour } from './lib/colours';
+import { SPEEDS, usePlaybackSpeed } from './lib/speed';
 import {
   bannerAt,
   bannerEntriesOf,
@@ -93,6 +94,9 @@ export function MatchViewer({
   const timeRef = useRef(0);
   const pausedRef = useRef(false);
   const doneRef = useRef(false);
+  const [speed, setSpeed] = usePlaybackSpeed();
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
   const [ui, setUi] = useState<Ui>({ revealed: 0, banner: null, paused: false });
   const [finished, setFinished] = useState(false);
   const onCompleteRef = useRef(onComplete);
@@ -117,7 +121,8 @@ export function MatchViewer({
     let last = performance.now();
     let completeTimer: ReturnType<typeof setTimeout> | undefined;
     const tick = (now: number) => {
-      const dt = Math.min(64, now - last);
+      // Speed scales the playback clock (and the animation step with it); nothing else.
+      const dt = Math.min(64, now - last) * speedRef.current;
       last = now;
       if (!pausedRef.current && !doneRef.current) {
         timeRef.current = Math.min(schedule.totalMs, timeRef.current + dt);
@@ -252,6 +257,19 @@ export function MatchViewer({
               onClick={() => onModeChange(item.id)}
             >
               {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mv-modes mv-speed" role="group" aria-label="Playback speed">
+          {SPEEDS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={speed === item ? 'selected' : ''}
+              aria-pressed={speed === item}
+              onClick={() => setSpeed(item)}
+            >
+              ×{item}
             </button>
           ))}
         </div>

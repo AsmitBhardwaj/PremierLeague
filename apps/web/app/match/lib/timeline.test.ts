@@ -17,6 +17,7 @@ import {
   scoreAt,
   type PlaybackMode,
 } from './timeline';
+import { watchMs } from './speed';
 
 const CLUBS = ['ARS', 'LIV', 'MCI', 'BHA', 'EVE', 'NEW', 'CHE', 'TOT'];
 
@@ -59,7 +60,7 @@ function finalDisplayedScore(
 }
 
 describe('highlights schedule', () => {
-  it('plays a full match in at most 20 seconds, 10 per half', () => {
+  it('plays a full match in at most 30 seconds at ×1 and 15 at ×2, 15 per half at ×1', () => {
     for (let sample = 0; sample < 24; sample++) {
       const { first, result } = playMatch(sample);
       const one = buildSchedule(first);
@@ -67,6 +68,9 @@ describe('highlights schedule', () => {
       expect(one.totalMs).toBeLessThanOrEqual(HALF_BUDGET_MS + 1e-6);
       expect(two.totalMs).toBeLessThanOrEqual(HALF_BUDGET_MS + 1e-6);
       expect(one.totalMs + two.totalMs).toBeLessThanOrEqual(MATCH_BUDGET_MS + 1e-6);
+      expect(MATCH_BUDGET_MS).toBe(30_000);
+      expect(watchMs(one.totalMs + two.totalMs, 1)).toBeLessThanOrEqual(30_000 + 1e-6);
+      expect(watchMs(one.totalMs + two.totalMs, 2)).toBeLessThanOrEqual(15_000 + 1e-6);
     }
   });
 

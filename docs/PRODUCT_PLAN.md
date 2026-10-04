@@ -30,7 +30,7 @@ This is the agreed flow from the design mockup:
 
 1. **Build squad** — player market with values; budget bar; formation slots (GK/DEF/MID/FWD); max **3 players per real club**; "Continue" only when the squad is valid.
 2. **Pick your team** — **pitch with the XI on the left**, substitutes row under the pitch, **selected player's info panel on the right** (overall rating, position, six-stat radar chart, fitness, form, positions, preferred foot, stat bars). Click a starter, then a same-position substitute, to swap. Tabs: **Team / Tactics**. Fixture card with win/draw/loss odds and **Kick off** always visible.
-3. **Watch the match** — 2D top-down pitch, players as dots, ball moves, scoreboard + clock, event banners (goal, chance, card), live commentary feed. **A full match plays back in ~20 seconds max.** Viewing options: highlights / text commentary / instant result. "Skip to full time" always available.
+3. **Watch the match** — 2D top-down pitch, players as dots, ball moves, scoreboard + clock, event banners (goal, chance, card), live commentary feed. **A full match plays back in ~30 seconds at the default ×1 speed (a ×2 toggle makes it ~15).** Viewing options: highlights / text commentary / instant result. "Skip to full time" always available.
 4. **League table** — updated table with your club highlighted, movement arrows, result card, player of the match, updated predicted finish, **Next match**.
 
 Before the season (first-time flow): **Found your club** (name, short name, crest, colours, stadium) → build squad → **instant season prediction** (shareable result card) → start the season.
@@ -66,7 +66,7 @@ Before the season (first-time flow): **Found your club** (name, short name, cres
 - Preferred foot: no data exists, so the field is omitted.
 - Six-stat radar: derived directly from engine ratings. Outfield players show Pace, Shooting, Passing, Dribbling, Tackling and Positioning; goalkeepers show Goalkeeping in place of Shooting. The headline number is the existing `overall()`.
 - Off-ball players: the timeline only positions players involved in each event. Other dots are cosmetic, anchored to the formation and shifting with the ball and possession. They never imply an event that is not in the timeline.
-- Highlights mode: goals, shots, big chances, cards, injuries and substitutions animate; everything else compresses into clock advance plus commentary. A full match plays in 20 seconds at most (about 10 seconds per half; the half-time pause is excluded). Instant mode skips straight to the result.
+- Highlights mode: goals, shots, big chances, cards, injuries and substitutions animate; everything else compresses into clock advance plus commentary. A full match plays in 30 seconds at most at the default ×1 speed (about 15 seconds per half; the half-time pause is excluded), replacing the original 20 seconds so the movement is easier to follow. A ×1 / ×2 speed toggle (×2 = 15 seconds) is remembered across matches and sessions in localStorage and changes playback only, never results; it applies to season matches, friendlies and the landing hero loop (always ×1). Instant mode skips straight to the result.
 - Match seed: `hash(club name, opponent, venue, play counter)`, using the seeded PRNG pipeline and never `Math.random`. The play counter is persisted so a refresh does not replay a seed by accident; "Play again" increments it. Lineup and tactic changes keep the seed, so outcomes can be compared. The seed is stored with match state and shown as a small muted "Match seed" detail.
 - Opponent AI: the engine's `pickSquad` XI, balanced tactic, no half-time changes. The user may play at home or away; the viewer keeps the engine's orientation (home attacks left to right) and the score bug always reads home on the left, with the user's club marked by its colour.
 - Fixture card odds: the exact Poisson scoreline grid over the same `expectedGoals` surrogate that `predictSeason` samples from (independent Poisson goals; the surrogate has no Dixon-Coles correction; home advantage is the surrogate's `isHome` term). They are not computed by summing player stats.
@@ -231,7 +231,7 @@ Style: matchday TV broadcast on the grass. Green is the ground the brand stands 
 
 **Phase 3 — Found club + squad builder + prediction screen.** Steps from §3 with all rules enforced; shareable prediction card.
 
-**Phase 4 — Match viewer.** 2D renderer that **plays back the engine's event timeline** (it never decides outcomes itself); ~20s per match; highlights / commentary / instant; half-time subs and tactic change; pick-your-team screen as described in §3.
+**Phase 4 — Match viewer.** 2D renderer that **plays back the engine's event timeline** (it never decides outcomes itself); ~30s per match (×2 toggle); highlights / commentary / instant; half-time subs and tactic change; pick-your-team screen as described in §3.
 
 **Phase 5 — Season loop ✅ done.** Fixtures, league table after every matchday, injuries, form, fitness, January window, save/resume.
 

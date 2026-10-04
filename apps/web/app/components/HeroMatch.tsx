@@ -48,7 +48,7 @@ export function HeroMatch({
     <div className="studio-screen hero-match">
       <div className="studio-screen-bar">
         <span>Match preview</span>
-        <span>20-second matches</span>
+        <span>30-second matches</span>
       </div>
       <div className="hm-stage">
         {Player ? (

@@ -5,7 +5,12 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import playerData from '../play/data/players.json';
 import { computeReplacedClub, listOpponents } from '../play/lib/clubs';
-import { STORAGE_KEY, parseSavedFlow, type ClubIdentity } from '../play/lib/persistence';
+import {
+  STORAGE_KEY,
+  parseSavedFlow,
+  stadiumName,
+  type ClubIdentity,
+} from '../play/lib/persistence';
 import { validateLineup, type MarketPlayer } from '../play/lib/squad';
 import { FullTime } from './FullTime';
 import { HalfTime } from './HalfTime';
@@ -311,8 +316,25 @@ export function MatchFlow() {
           result={active.result}
           sides={sides}
           seed={active.seed}
-          onPlayAgain={kickOff}
-          onChangeTeam={() => setStage('pick')}
+          matchdayLabel="Friendly"
+          venueLabel={preparation.venue === 'home' ? stadiumName(preparation.identity) : 'Away'}
+          actions={
+            <>
+              <button
+                type="button"
+                className="button button-primary button-default fs-continue"
+                onClick={kickOff}
+              >
+                Play again <span aria-hidden="true">→</span>
+              </button>
+              <button type="button" className="fs-outline" onClick={() => setStage('pick')}>
+                Change team
+              </button>
+              <a className="fs-outline" href="/play">
+                Back to preview
+              </a>
+            </>
+          }
         />
       ) : null}
     </main>

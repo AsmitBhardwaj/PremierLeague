@@ -1,0 +1,423 @@
+/* Full-time: the scoreboard, player of the match, ratings, match stats and what it means. */
+.ft {
+  padding-block: 24px calc(48px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 22px;
+}
+
+.sb-red {
+  color: #ffd7d4;
+  font-weight: 600;
+}
+
+/* Player of the match: a volt banner. */
+.fs-potm {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  background: var(--volt);
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--ink);
+}
+
+.fs-potm .club-badge {
+  width: 56px;
+  height: 56px;
+  font-size: 16px;
+}
+
+.fs-potm p {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fs-potm h2 {
+  margin: 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-family: var(--display);
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 600;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.fs-potm h2 span {
+  padding: 0 8px;
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.fs-potm .fs-potm-line {
+  font-family: var(--body);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.fs-potm-rating {
+  padding: 4px 14px;
+  background: var(--ink);
+  color: var(--volt);
+  font-family: var(--display);
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+/* Two columns: ratings (wider) and match stats; on phones stats come first. */
+.fs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.fs-ratings {
+  order: 1;
+}
+
+.fs-stats {
+  order: 2;
+}
+
+.fs-card {
+  min-width: 0;
+  padding: 20px 22px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--ink);
+}
+
+.fs-title {
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fs-title span {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+/* Stats: leader in bold, split bar with the home share growing left, the away side in ink. */
+.fs-row {
+  padding: 9px 0 10px;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 74px;
+  align-items: center;
+  gap: 6px 10px;
+  border-top: 1px solid var(--hairline);
+}
+
+.fs-row strong {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.fs-row strong:last-of-type {
+  text-align: right;
+}
+
+.fs-row strong.lead {
+  font-weight: 600;
+  text-shadow: 0.6px 0 0 currentcolor;
+}
+
+.fs-row span {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.fs-row i {
+  height: 8px;
+  grid-column: 1 / -1;
+  display: block;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.fs-row i b {
+  height: 100%;
+  display: block;
+  border-right: 2px solid var(--paper);
+}
+
+/* Ratings */
+.fs-ratings ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fs-player {
+  --strip: var(--ink);
+  padding: 8px 0 8px 12px;
+  display: grid;
+  grid-template-columns: 52px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  border-top: 1px solid var(--hairline);
+  box-shadow: inset 6px 0 0 var(--strip);
+}
+
+.fs-gk {
+  --strip: var(--gk);
+}
+
+.fs-def {
+  --strip: var(--def);
+}
+
+.fs-mid {
+  --strip: var(--mid);
+}
+
+.fs-fwd {
+  --strip: var(--fwd);
+}
+
+.fs-player.potm {
+  background: var(--chip);
+}
+
+.fs-chip {
+  padding: 1px 0;
+  border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.fs-pos {
+  color: var(--text-muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.fs-name {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-tags {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.fs-tags:empty {
+  display: none;
+}
+
+.fs-tag {
+  padding: 0 7px;
+  border: 2px solid var(--ink);
+  background: var(--chip);
+  font-family: var(--display);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+
+.fs-tag-goal {
+  background: var(--volt);
+}
+
+.fs-tag-yc {
+  background: var(--gk);
+}
+
+.fs-tag-rc {
+  background: var(--signal-red);
+  border-color: var(--signal-red);
+  color: #fff;
+}
+
+.fs-tag-inj {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.fs-tag-on {
+  background: var(--ink);
+  color: var(--volt);
+}
+
+.fs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.fs-actions .fs-continue {
+  min-width: min(100%, 320px);
+  min-height: 64px;
+  font-size: 22px;
+}
+
+.fs-outline {
+  min-height: 48px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 2px solid var(--cream);
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fs-seed {
+  margin: 0;
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* "What it means": the season panel, in ink. */
+.fs-means {
+  padding: 22px 24px;
+  background: var(--ink);
+  box-shadow: 8px 8px 0 var(--deep-green);
+  color: var(--cream);
+}
+
+.fs-means h2 {
+  margin: 0 0 14px;
+  color: var(--volt);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fs-means dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 28px;
+}
+
+.fs-means dt {
+  color: var(--on-green);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fs-means dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.fs-means dd strong {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.fs-means dd small {
+  display: block;
+  color: var(--on-green);
+  font-size: 15px;
+}
+
+.fs-table {
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .fs-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fs-stats {
+    order: 1;
+  }
+
+  .fs-ratings {
+    order: 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .fs-card {
+    padding: 14px;
+    box-shadow: 6px 6px 0 var(--deep-green);
+  }
+
+  .fs-potm {
+    padding: 12px 14px;
+    gap: 6px 12px;
+  }
+
+  .fs-potm .club-badge {
+    width: 44px;
+    height: 44px;
+    font-size: 13px;
+  }
+
+  .fs-means {
+    padding: 16px;
+    box-shadow: 6px 6px 0 var(--deep-green);
+  }
+
+  .fs-means dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fs-actions > * {
+    flex: 1 1 100%;
+  }
+}

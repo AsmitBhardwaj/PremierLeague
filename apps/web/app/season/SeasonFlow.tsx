@@ -4,6 +4,7 @@ import type { MatchEvent } from '@pl/engine';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FullTime } from '../match/FullTime';
+import { WhatItMeans } from './WhatItMeans';
 import { HalfTime } from '../match/HalfTime';
 import { MatchViewer, type ViewerSides } from '../match/MatchViewer';
 import { PickTeam } from '../match/PickTeam';
@@ -11,13 +12,17 @@ import type { MatchPreparation, PendingSubstitution } from '../match/lib/match';
 import type { PlaybackMode } from '../match/lib/timeline';
 import playerData from '../play/data/players.json';
 import { listClubs } from '../play/lib/clubs';
-import { STORAGE_KEY, parseSavedFlow, type ClubIdentity } from '../play/lib/persistence';
+import {
+  STORAGE_KEY,
+  parseSavedFlow,
+  stadiumName,
+  type ClubIdentity,
+} from '../play/lib/persistence';
 import { validateLineup, type Formation, type MarketPlayer } from '../play/lib/squad';
 import { Hub } from './Hub';
 import { SeasonFinale } from './Finale';
 import { TransferWindow } from './Window';
 import { LeagueTable } from './LeagueTable';
-import { ProjectionPanel } from './Projection';
 import { SeasonClient } from './lib/client';
 import { ordinal, userPosition } from './lib/format';
 import type { MatchFinish, MatchStart, SeasonView } from './lib/protocol';
@@ -118,6 +123,12 @@ export function SeasonFlow() {
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [preparation, setPreparation] = useState<MatchPreparation | null>(null);
   const activeRef = useRef<ActiveMatch | null>(null);
+  /** The projected finish before the match kicked off, for "What it means". */
+  const [before, setBefore] = useState<{
+    projection: SeasonView['projection'];
+    position: number;
+  } | null>(null);
+  const [showTable, setShowTable] = useState(false);
 
   const mode: PlaybackMode = savedMode ?? (reducedMotion ? 'commentary' : 'highlights');
 
@@ -287,6 +298,8 @@ export function SeasonFlow() {
       tactic: MatchPreparation['tactic'];
     }) => {
       if (!view) return;
+      setBefore({ projection: view.projection, position: userPosition(view.table) });
+      setShowTable(false);
       const chosen = lineup ?? {
         formation: view.lineup.formation as Formation,
         starters: [...view.lineup.starters],
@@ -622,34 +635,44 @@ export function SeasonFlow() {
             result={active.finish.result}
             sides={sides}
             seed={active.finish.seed}
-            actions={null}
-          />
-          <section className="se-after page-shell" aria-label="League after this matchday">
-            <div>
-              <LeagueTable
-                table={view.table}
-                names={names}
-                caption={`League table after matchday ${active.finish.round + 1}`}
-              />
-            </div>
-            <div>
-              <ProjectionPanel projection={view.projection} prediction={view.prediction} />
-              <div className="se-actions">
+            matchdayLabel={`Matchday ${active.finish.round + 1}`}
+            venueLabel={active.finish.userSide === 'home' ? stadiumName(view.identity) : 'Away'}
+            actions={
+              <>
                 <button
                   type="button"
-                  className="button button-primary button-default"
+                  className="button button-primary button-default fs-continue"
                   onClick={afterMatch}
                 >
                   {view.phase === 'matchday'
-                    ? 'Next match'
+                    ? 'Continue'
                     : view.phase === 'window'
                       ? 'To the January window'
                       : 'Season summary'}{' '}
                   <span aria-hidden="true">→</span>
                 </button>
-              </div>
-            </div>
-          </section>
+                <button
+                  type="button"
+                  className="fs-outline"
+                  aria-expanded={showTable}
+                  onClick={() => setShowTable((open) => !open)}
+                >
+                  {showTable ? 'Hide full table' : 'View full table'}
+                </button>
+              </>
+            }
+          >
+            <WhatItMeans view={view} finish={active.finish} before={before} names={names} />
+          </FullTime>
+          {showTable ? (
+            <section className="se-after page-shell" aria-label="League after this matchday">
+              <LeagueTable
+                table={view.table}
+                names={names}
+                caption={`League table after matchday ${active.finish.round + 1}`}
+              />
+            </section>
+          ) : null}
         </>
       ) : null}
 

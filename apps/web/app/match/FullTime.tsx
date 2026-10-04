@@ -1,9 +1,22 @@
 'use client';
 
-import type { MatchResult, PlayerMatchRating, Team, TeamStats } from '@pl/engine';
+import type { MatchResult, Player, PlayerMatchRating, Side, Team, TeamStats } from '@pl/engine';
 import type { ReactNode } from 'react';
-import { rankPlayers, playerOfTheMatch } from './lib/fulltime';
+import { ClubBadge } from '../components/ClubBadge';
+import { INK, userDotColour } from './lib/colours';
+import {
+  contributionLine,
+  goalScorers,
+  playerOfTheMatch,
+  playerTags,
+  rankPlayers,
+  redCardLines,
+  statLeader,
+} from './lib/fulltime';
+import { ratingTone } from './lib/halftime';
 import type { ViewerSides } from './MatchViewer';
+import { ScoreBug } from './ScoreBug';
+import './fulltime.css';
 
 const rows: {
   label: string;
@@ -21,38 +34,38 @@ const rows: {
   { label: 'Red cards', pick: (s) => s.redCards },
 ];
 
-function Ratings({
-  team,
+function StatSplit({
   label,
-  ratings,
-  potm,
+  home,
+  away,
+  digits = 0,
+  suffix = '',
+  homeColour,
 }: {
-  team: Team;
   label: string;
-  ratings: PlayerMatchRating[];
-  potm?: string;
+  home: number;
+  away: number;
+  digits?: number;
+  suffix?: string;
+  homeColour: string;
 }) {
-  const list = rankPlayers(ratings.filter((item) => item.teamId === team.id));
+  const leader = statLeader(home, away);
+  const total = home + away;
+  const share = total > 0 ? (home / total) * 100 : 50;
   return (
-    <div className="ft-card">
-      <p className="mt-kicker">{label} · player ratings</p>
-      <ol className="ft-ratings">
-        {list.map((item) => (
-          <li key={item.playerId} className={item.playerId === potm ? 'potm' : ''}>
-            <strong>{item.rating.toFixed(1)}</strong>
-            <span>
-              {item.name}
-              {item.playerId === potm ? <em>Player of the match</em> : null}
-            </span>
-            <small>
-              {item.goals ? `${item.goals} goal${item.goals > 1 ? 's' : ''}` : ''}
-              {item.assists ? ` ${item.assists} assist${item.assists > 1 ? 's' : ''}` : ''}
-              {item.yellowCards ? ' yellow' : ''}
-              {item.redCard ? ' red' : ''}
-            </small>
-          </li>
-        ))}
-      </ol>
+    <div className="fs-row">
+      <strong className={leader === 'home' ? 'lead' : ''}>
+        {home.toFixed(digits)}
+        {suffix}
+      </strong>
+      <span>{label}</span>
+      <strong className={leader === 'away' ? 'lead' : ''}>
+        {away.toFixed(digits)}
+        {suffix}
+      </strong>
+      <i aria-hidden="true">
+        <b style={{ width: `${share}%`, background: homeColour }} />
+      </i>
     </div>
   );
 }
@@ -61,112 +74,159 @@ export function FullTime({
   result,
   sides,
   seed,
-  onPlayAgain,
-  onChangeTeam,
+  matchdayLabel,
+  venueLabel,
+  children,
   actions,
 }: {
   result: MatchResult;
   sides: ViewerSides;
   seed: number;
-  onPlayAgain?: () => void;
-  onChangeTeam?: () => void;
-  /** Replaces the friendly's buttons (a season has no replay). */
-  actions?: ReactNode;
+  /** "Matchday 12" in a season, "Friendly" otherwise. */
+  matchdayLabel: string;
+  /** The stadium the match was played at ("Away" when the user played on the road). */
+  venueLabel: string;
+  /** Season mode: the "What it means" panel, under the match. */
+  children?: ReactNode;
+  actions: ReactNode;
 }) {
   const { home, away, userSide } = sides;
+  const sideOf = (teamId: string): Side => (teamId === home.id ? 'home' : 'away');
+  const codeOf = (teamId: string | null): string =>
+    teamId === home.id ? sides.homeLabel : sides.awayLabel;
+  const everyone = new Map<string, Player & { teamId: string }>(
+    [home, away].flatMap((team: Team) =>
+      [...team.players, ...(team.bench ?? [])].map(
+        (p) => [p.id, { ...p, teamId: team.id }] as const,
+      ),
+    ),
+  );
+  const nameOf = (id: string): string => everyone.get(id)?.name ?? 'A player';
+
   const best = playerOfTheMatch(result.playerRatings);
-  const user = userSide === 'home' ? result.score.home : result.score.away;
-  const them = userSide === 'home' ? result.score.away : result.score.home;
-  const verdict = user > them ? 'Win' : user === them ? 'Draw' : 'Defeat';
+  const bestPlayer = best ? everyone.get(best.playerId) : undefined;
+  const bestSide = best ? sideOf(best.teamId) : null;
+  const cleanSheet = bestSide ? result.score[bestSide === 'home' ? 'away' : 'home'] === 0 : false;
+  const userTeam = userSide === 'home' ? home : away;
+  const mine: PlayerMatchRating[] = rankPlayers(
+    result.playerRatings.filter((item) => item.teamId === userTeam.id),
+  );
+  // The home segment is the home club's colour. When that is the ink fallback, or the home side
+  // is the opponent (who has no colour), the grass green keeps it apart from the ink away side.
+  const userColour = userDotColour(sides.userColour);
+  const homeColour = userSide === 'home' && userColour !== INK ? userColour : 'var(--grass-dark)';
+
+  const notes = (team: Team) => {
+    const scorers = goalScorers(result.events, team.id, nameOf);
+    const reds = redCardLines(result.events, team.id, nameOf);
+    if (!scorers.length && !reds.length) return undefined;
+    return (
+      <ul>
+        {scorers.map((goal, index) => (
+          <li key={`g${index}`}>
+            {goal.name} {goal.minute}
+            {goal.pen ? ' (pen)' : ''}
+            {goal.og ? ' (og)' : ''}
+          </li>
+        ))}
+        {reds.map((card, index) => (
+          <li key={`r${index}`} className="sb-red">
+            {card.name} {card.minute} (red card)
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
-    <section className="ft page-shell" aria-labelledby="ft-title">
-      <div className="ht-bug">
-        <span className="mv-tag">FT</span>
-        <h1 id="ft-title">
-          {home.name}{' '}
-          <strong>
-            {result.score.home}–{result.score.away}
-          </strong>{' '}
-          {away.name}
-        </h1>
-      </div>
-      <p className="ft-verdict">
-        {verdict} for {userSide === 'home' ? sides.homeLabel : sides.awayLabel}
-        {best ? (
-          <>
-            {' '}
-            · Player of the match: <b>{best.name}</b> ({best.rating.toFixed(1)})
-          </>
-        ) : null}
-      </p>
+    <section className="ft page-shell">
+      <ScoreBug
+        titleId="ft-title"
+        tag="FULL-TIME"
+        subtitle={`${matchdayLabel} · ${venueLabel}`}
+        sides={sides}
+        score={result.score}
+        homeNote={notes(home)}
+        awayNote={notes(away)}
+      />
 
-      <div className="ft-grid">
-        <div className="ft-card">
-          <p className="mt-kicker">Team stats</p>
-          {rows.map((row) => {
-            const h = row.pick(result.stats.home);
-            const a = row.pick(result.stats.away);
-            const digits = row.digits ?? 0;
-            const total = h + a;
-            return (
-              <div className="ht-stat" key={row.label}>
-                <strong>
-                  {h.toFixed(digits)}
-                  {row.suffix}
-                </strong>
-                <span>
-                  {row.label}
-                  <i aria-hidden="true">
-                    <b style={{ width: `${total ? (h / total) * 100 : 50}%` }} />
-                  </i>
-                </span>
-                <strong>
-                  {a.toFixed(digits)}
-                  {row.suffix}
-                </strong>
-              </div>
-            );
-          })}
+      {best && bestPlayer ? (
+        <aside className="fs-potm" aria-label="Player of the match">
+          <ClubBadge code={codeOf(best.teamId)} />
+          <div className="fs-potm-text">
+            <p>Player of the match</p>
+            <h2>
+              {best.name} <span>{bestPlayer.position}</span>
+            </h2>
+            <p className="fs-potm-line">
+              {contributionLine(best, bestPlayer.position, cleanSheet)}
+            </p>
+          </div>
+          <b className="fs-potm-rating" aria-label={`Rating ${best.rating.toFixed(1)}`}>
+            {best.rating.toFixed(1)}
+          </b>
+        </aside>
+      ) : null}
+
+      <div className="fs-grid">
+        <div className="fs-card fs-stats">
+          <h2 className="fs-title">
+            Match stats{' '}
+            <span>
+              {sides.homeLabel} – {sides.awayLabel}
+            </span>
+          </h2>
+          {rows.map((row) => (
+            <StatSplit
+              key={row.label}
+              label={row.label}
+              home={row.pick(result.stats.home)}
+              away={row.pick(result.stats.away)}
+              digits={row.digits}
+              suffix={row.suffix}
+              homeColour={homeColour}
+            />
+          ))}
         </div>
-        <Ratings
-          team={home}
-          label={sides.homeLabel}
-          ratings={result.playerRatings}
-          potm={best?.playerId}
-        />
-        <Ratings
-          team={away}
-          label={sides.awayLabel}
-          ratings={result.playerRatings}
-          potm={best?.playerId}
-        />
+
+        <div className="fs-card fs-ratings">
+          <h2 className="fs-title">
+            Your ratings <span>{codeOf(userTeam.id)}</span>
+          </h2>
+          <ol>
+            {mine.map((item) => {
+              const position = everyone.get(item.playerId)?.position ?? 'MID';
+              const tags = playerTags(item, result.events);
+              return (
+                <li
+                  key={item.playerId}
+                  className={`fs-player fs-${position.toLowerCase()}${
+                    item.playerId === best?.playerId ? ' potm' : ''
+                  }`}
+                >
+                  <b className={`fs-chip tone-${ratingTone(item.rating)}`}>
+                    {item.rating.toFixed(1)}
+                  </b>
+                  <span className="fs-pos">{position}</span>
+                  <strong className="fs-name">{item.name}</strong>
+                  <span className="fs-tags">
+                    {tags.map((tag) => (
+                      <em key={tag.label} className={`fs-tag fs-tag-${tag.kind}`}>
+                        {tag.label}
+                      </em>
+                    ))}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </div>
 
-      {actions !== undefined ? (
-        actions
-      ) : (
-        <div className="ht-actions ft-actions">
-          <button
-            type="button"
-            className="button button-primary button-default"
-            onClick={onPlayAgain}
-          >
-            Play again <span aria-hidden="true">→</span>
-          </button>
-          <button
-            type="button"
-            className="button button-secondary button-default"
-            onClick={onChangeTeam}
-          >
-            Change team
-          </button>
-          <a className="button button-secondary button-default" href="/play">
-            Back to prediction
-          </a>
-        </div>
-      )}
-      <p className="mt-seed">Match seed {seed}</p>
+      {children}
+
+      <div className="fs-actions">{actions}</div>
+      <p className="fs-seed">Match seed {seed}</p>
     </section>
   );
 }

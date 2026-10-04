@@ -62,8 +62,8 @@ const careerSteps = [
     accent: 'mid',
   },
   {
-    title: 'Play every match',
-    text: 'Watch 20-second matches and make half-time changes.',
+    title: 'Play the full season',
+    text: 'Watch 20-second matches, make half-time changes and climb a live league table through all 38 games, with injuries and a January window.',
     accent: 'fwd',
   },
 ] as const;
@@ -393,10 +393,11 @@ export default function Home() {
             <h2>Watch every match.</h2>
             <p>
               Pick your XI, set your tactics, and watch each match play out in 20 seconds. Make your
-              changes at half-time, then see it through to full time.
+              changes at half-time, then see it through to full time. Play all 38 matches with a
+              live league table, injuries to cover for and a January window to fix your squad.
             </p>
             <a className="button button-primary button-default" href="/play">
-              Play your first match <Arrow />
+              Play your season <Arrow />
             </a>
           </div>
           <MatchdayFeatures />

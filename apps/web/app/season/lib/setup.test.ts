@@ -27,6 +27,15 @@ describe('season setup from the real market', () => {
     for (const club of setup.clubs.slice(1)) expect(club.players.length).toBeGreaterThanOrEqual(15);
   });
 
+  it('gives the January window the budget it is built with, Standard by default', () => {
+    expect(buildSetup(market, replaced.id, 'Test FC', squad, 11).transferMarket?.budget).toBe(
+      SQUAD_BUDGET,
+    );
+    expect(buildSetup(market, replaced.id, 'Test FC', squad, 11, 1500).transferMarket?.budget).toBe(
+      1500,
+    );
+  });
+
   it('plays a whole season, pauses at the window, and replays from its save', () => {
     const setup = buildSetup(market, replaced.id, 'Test FC', squad, 11);
     const career = new Career(setup);

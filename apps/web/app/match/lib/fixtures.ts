@@ -21,6 +21,7 @@ export function testPreparation(
       primaryColor: '#f7f8f8',
       secondaryColor: '#1c1d1f',
       crestShape: 'shield',
+      budget: 'standard',
     },
     squad,
     formation: '4-4-2',

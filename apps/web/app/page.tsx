@@ -320,8 +320,8 @@ export default function Home() {
               {SQUAD_SIZE} spots. {money(SQUAD_BUDGET)}. Choose wisely.
             </h2>
             <p>
-              Pick from {playerData.length} real players. Stay on budget, and take no more than{' '}
-              {maxPerClubWord} from any one club.
+              Pick from {playerData.length} real players. Choose your budget, from Underdog to Big
+              spender, and take no more than {maxPerClubWord} from any one club.
             </p>
           </div>
           <div className="transfer-panel">
@@ -329,7 +329,9 @@ export default function Home() {
               <span>Your transfer budget</span>
               <div>
                 <strong>{money(SQUAD_BUDGET)}</strong>
-                <p>Spend it on real players at their market value.</p>
+                <p>
+                  Standard budget. Go Underdog for a harder season or Big spender for an easier one.
+                </p>
                 <i className="budget-bar" aria-hidden="true" />
               </div>
             </div>

@@ -7,11 +7,11 @@ import playerData from '../play/data/players.json';
 import {
   MAX_PER_REAL_CLUB,
   POSITION_ORDER,
-  SQUAD_BUDGET,
   formatMoney,
   squadCost,
   type MarketPlayer,
 } from '../play/lib/squad';
+import { budgetOf } from '../play/lib/budget';
 import { LeagueTable } from './LeagueTable';
 import { ProjectionPanel } from './Projection';
 import type { SeasonView } from './lib/protocol';
@@ -41,7 +41,7 @@ export function TransferWindow({
   const { transfersMade, maxTransfers, outFor } = view.window;
   const left = maxTransfers - transfersMade;
   const cost = squadCost(squad);
-  const cash = SQUAD_BUDGET - cost;
+  const cash = budgetOf(view.identity.budget) - cost;
   const out = squad.find((p) => p.id === outId) ?? null;
   const signing = market.find((p) => p.id === inId) ?? null;
   const owned = useMemo(() => new Set(squad.map((p) => p.id)), [squad]);

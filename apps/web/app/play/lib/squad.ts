@@ -1,6 +1,6 @@
 import type { Player, Position, Team } from '@pl/engine';
 
-/** Budget in tenths of £m (our own valuations): £275.0m. */
+/** The Standard budget in tenths of £m (our own valuations): £275.0m. Presets: `./budget`. */
 export const SQUAD_BUDGET = 2750;
 
 /** Tenths of £m as a display string: whole millions stay whole, e.g. £175m, £12.5m, £0.9m. */
@@ -61,13 +61,16 @@ export const positionCounts = (players: readonly MarketPlayer[]): Record<Positio
   return counts;
 };
 
-export function validateSquad(players: readonly MarketPlayer[]): string[] {
+export function validateSquad(
+  players: readonly MarketPlayer[],
+  budget: number = SQUAD_BUDGET,
+): string[] {
   const errors: string[] = [];
   const unique = new Set(players.map((player) => player.id));
   if (unique.size !== players.length) errors.push('A player can only be selected once.');
   if (players.length !== SQUAD_SIZE) errors.push(`Select exactly ${SQUAD_SIZE} players.`);
-  if (squadCost(players) > SQUAD_BUDGET)
-    errors.push(`The squad is over the ${formatMoney(SQUAD_BUDGET)} budget.`);
+  if (squadCost(players) > budget)
+    errors.push(`The squad is over the ${formatMoney(budget)} budget.`);
   const positions = positionCounts(players);
   for (const position of POSITION_ORDER) {
     if (positions[position] !== POSITION_QUOTAS[position]) {
@@ -168,6 +171,7 @@ export function assessSelection(
   player: MarketPlayer,
   selected: readonly MarketPlayer[],
   market: readonly MarketPlayer[],
+  budget: number = SQUAD_BUDGET,
 ): SelectionAssessment {
   if (selected.some((item) => item.id === player.id)) {
     return { allowed: false, message: `${player.name} is already in your squad.` };
@@ -186,10 +190,10 @@ export function assessSelection(
   }
   const next = [...selected, player];
   const currentCost = squadCost(next);
-  if (currentCost > SQUAD_BUDGET) {
+  if (currentCost > budget) {
     return {
       allowed: false,
-      message: `${player.name} would take the squad over ${formatMoney(SQUAD_BUDGET)}.`,
+      message: `${player.name} would take the squad over ${formatMoney(budget)}.`,
     };
   }
   const completion = cheapestLegalCompletion(next, market);
@@ -200,7 +204,7 @@ export function assessSelection(
     };
   }
   const minimumFinalCost = currentCost + completion.cost;
-  if (minimumFinalCost > SQUAD_BUDGET) {
+  if (minimumFinalCost > budget) {
     return {
       allowed: false,
       message: `${player.name} would leave too little budget. The cheapest legal completion would cost ${formatMoney(
@@ -210,6 +214,21 @@ export function assessSelection(
     };
   }
   return { allowed: true, minimumFinalCost };
+}
+
+/**
+ * True when this player cannot be in any legal squad within `budget`: even alone, with the
+ * cheapest legal completion of the other 17, the squad would cost too much (e.g. Haaland on
+ * Underdog). Presented as "Out of reach" rather than as a price change.
+ */
+export function outOfReach(
+  player: MarketPlayer,
+  market: readonly MarketPlayer[],
+  budget: number,
+): boolean {
+  if (player.value > budget) return true;
+  const completion = cheapestLegalCompletion([player], market);
+  return !completion || player.value + completion.cost > budget;
 }
 
 export function validateFormation(
@@ -238,8 +257,12 @@ export function validateLineup(
   squad: readonly MarketPlayer[],
   starterIds: readonly string[],
   formation: Formation,
+  budget: number = SQUAD_BUDGET,
 ): string[] {
-  const errors = [...validateSquad(squad), ...validateFormation(squad, starterIds, formation)];
+  const errors = [
+    ...validateSquad(squad, budget),
+    ...validateFormation(squad, starterIds, formation),
+  ];
   const starterSet = new Set(starterIds);
   const bench = squad.filter((player) => !starterSet.has(player.id));
   if (bench.length !== 7) errors.push('The substitutes bench must contain exactly seven players.');

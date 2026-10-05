@@ -43,6 +43,8 @@ const PLAYED_ONLY = process.env.PLAYED_ONLY === '1';
 const BATCH = Number(process.env.BATCH ?? 12);
 /** Static-engine repeats of the 38 fixtures (no season dynamics): the surrogate's own yardstick. */
 const STATIC_REPEATS = Number(process.env.STATIC ?? 100);
+/** Budget in tenths of £m for the balanced and optimised builds (a difficulty preset: 1500, 2750, 4000). */
+const BUDGET = Number(process.env.BUDGET ?? SQUAD_BUDGET);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const market = JSON.parse(
   readFileSync(join(root, 'apps', 'web', 'app', 'play', 'data', 'players.json'), 'utf8'),
@@ -64,8 +66,8 @@ const only = process.env.ONLY_LANDING === '1';
 const onlyLabels = process.env.ONLY?.split(',');
 const builders: { label: string; build: () => MarketPlayer[] }[] = [
   { label: 'landing sample', build: () => byId(LANDING_IDS) },
-  { label: 'balanced', build: () => balancedBuild(SQUAD_BUDGET) },
-  { label: 'optimised', build: () => optimise(SQUAD_BUDGET) },
+  { label: 'balanced', build: () => balancedBuild(BUDGET) },
+  { label: 'optimised', build: () => optimise(BUDGET) },
   { label: 'cheapest legal', build: () => byId(cheapest.playerIds) },
 ];
 // Squads are built only when played (the optimiser is slow), so a sweep can ask for one.

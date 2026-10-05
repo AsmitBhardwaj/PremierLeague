@@ -1413,6 +1413,38 @@ h3,
   opacity: 0;
 }
 
+.budget-options label {
+  min-height: 84px;
+  padding: 10px 8px;
+  gap: 2px;
+  align-content: center;
+  text-align: center;
+}
+
+.budget-options label strong {
+  font-size: 22px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.budget-options label small {
+  color: var(--text-secondary);
+  font-family: var(--body);
+  font-size: 12px;
+  text-transform: none;
+}
+
+.budget-options label:has(input:focus-visible) {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.budget-tag {
+  font-family: var(--display);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .colour-fields {
   margin-top: 24px;
   display: grid;

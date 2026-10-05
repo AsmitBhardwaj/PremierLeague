@@ -4,6 +4,7 @@ import type { AwardLine } from '@pl/engine';
 import { useState } from 'react';
 import { Card } from '../components/Card';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
+import { presetLabel } from '../play/lib/budget';
 import { againstPosition } from '../play/lib/preview';
 import { LeagueTable } from './LeagueTable';
 import {
@@ -126,9 +127,10 @@ export function SeasonFinale({
     awards?.userTopScorer ?? null,
   );
   const name = view.identity.name;
+  const budgetLabel = presetLabel(view.identity.budget);
   const codeOf = (clubId: string): string =>
     clubId === USER_CLUB_ID ? view.identity.shortName || name : clubId;
-  const shareText = `${name} finished ${ordinal(position)} with ${row.points} points in a 38-match season (${won}W ${drawn}D ${lost}L). ${summary}.${
+  const shareText = `${name} (${budgetLabel}) finished ${ordinal(position)} with ${row.points} points in a 38-match season (${won}W ${drawn}D ${lost}L). ${summary}.${
     awards?.userTopScorer
       ? ` Top scorer: ${awards.userTopScorer.name}, ${awards.userTopScorer.goals} goals.`
       : ''
@@ -177,7 +179,9 @@ export function SeasonFinale({
       ) : null}
 
       <Card className="se-season-card" aria-label="Season card">
-        <p className="card-kicker">{name} · season card</p>
+        <p className="card-kicker">
+          {name} · {budgetLabel} · season card
+        </p>
         <p className="se-card-position">{ordinal(position)}</p>
         <dl className="se-facts">
           <div>

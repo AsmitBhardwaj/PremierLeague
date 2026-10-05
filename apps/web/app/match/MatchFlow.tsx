@@ -11,6 +11,7 @@ import {
   stadiumName,
   type ClubIdentity,
 } from '../play/lib/persistence';
+import { budgetOf } from '../play/lib/budget';
 import { validateLineup, type MarketPlayer } from '../play/lib/squad';
 import { FullTime } from './FullTime';
 import { HalfTime } from './HalfTime';
@@ -115,7 +116,15 @@ export function MatchFlow() {
   useEffect(() => {
     try {
       const phase3 = parseSavedFlow(localStorage.getItem(STORAGE_KEY), market);
-      if (!phase3 || validateLineup(phase3.selected, phase3.starterIds, phase3.formation).length) {
+      if (
+        !phase3 ||
+        validateLineup(
+          phase3.selected,
+          phase3.starterIds,
+          phase3.formation,
+          budgetOf(phase3.identity.budget),
+        ).length
+      ) {
         return;
       }
       const saved = parseSavedMatchFlow(

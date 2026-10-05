@@ -11,8 +11,8 @@ import {
   FORMATIONS,
   POSITION_ORDER,
   POSITION_QUOTAS,
-  SQUAD_BUDGET,
   formatMoney,
+  outOfReach,
   assessSelection,
   cheapestLegalCompletion,
   createPredictionTeam,
@@ -24,6 +24,13 @@ import {
   type Formation,
   type MarketPlayer,
 } from './lib/squad';
+import {
+  BUDGET_PRESETS,
+  BUDGET_PRESET_ORDER,
+  budgetOf,
+  presetLabel,
+  type BudgetPreset,
+} from './lib/budget';
 import { buildOpponentTeams, computeReplacedClub } from './lib/clubs';
 import { benchOf, pitchPositions, startersOf, swapStarter } from './lib/lineup';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
@@ -194,6 +201,25 @@ function IdentityStep({
               ))}
             </div>
           </fieldset>
+          <fieldset className="crest-options budget-options">
+            <legend>Choose your budget</legend>
+            <div>
+              {BUDGET_PRESET_ORDER.map((preset) => (
+                <label key={preset} className={identity.budget === preset ? 'selected' : ''}>
+                  <input
+                    type="radio"
+                    name="budget"
+                    value={preset}
+                    checked={identity.budget === preset}
+                    onChange={() => update('budget', preset)}
+                  />
+                  <span>{BUDGET_PRESETS[preset].label}</span>
+                  <strong>{money(BUDGET_PRESETS[preset].budget)}</strong>
+                  <small>{BUDGET_PRESETS[preset].blurb}</small>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="colour-fields">
             <label className="field">
               <span>Primary colour</span>
@@ -227,6 +253,9 @@ function IdentityStep({
           <h2>{identity.name || 'Your club'}</h2>
           <p>{stadiumName(identity)}</p>
           <span>Entering in place of {REPLACED_CLUB.name}</span>
+          <span className="budget-tag">
+            {presetLabel(identity.budget)} · {money(budgetOf(identity.budget))}
+          </span>
         </Card>
       </form>
     </section>
@@ -234,22 +263,38 @@ function IdentityStep({
 }
 
 function SquadStep({
+  budgetPreset,
   selected,
   setSelected,
   onBack,
   onContinue,
 }: {
+  budgetPreset: BudgetPreset;
   selected: MarketPlayer[];
   setSelected: (players: MarketPlayer[]) => void;
   onBack: () => void;
   onContinue: () => void;
 }) {
   const [message, setMessage] = useState('');
+  const budget = budgetOf(budgetPreset);
+  const reachLabel = `Out of reach on ${presetLabel(budgetPreset)}`;
+  // Players who cannot be in any legal squad at this budget even on their own. Only the dearest
+  // players can be (a cheap one always leaves room for the cheapest completion), so the exact
+  // check runs on those.
+  const unreachable = useMemo(() => {
+    const floor = cheapestLegalCompletion([], market)?.cost ?? 0;
+    const ids = new Set<string>();
+    for (const player of market) {
+      if (player.status === 'u' || player.value < budget - floor) continue;
+      if (outOfReach(player, market, budget)) ids.add(player.id);
+    }
+    return ids;
+  }, [budget]);
   const selectedIds = useMemo(() => new Set(selected.map((player) => player.id)), [selected]);
   const counts = positionCounts(selected);
   const cost = squadCost(selected);
   const completion = useMemo(() => cheapestLegalCompletion(selected, market), [selected]);
-  const errors = validateSquad(selected);
+  const errors = validateSquad(selected, budget);
   const clubUsage = useMemo(() => {
     const usage = new Map<string, { name: string; count: number }>();
     for (const player of selected) {
@@ -260,7 +305,7 @@ function SquadStep({
   }, [selected]);
 
   const add = (player: MarketPlayer) => {
-    const assessment = assessSelection(player, selected, market);
+    const assessment = assessSelection(player, selected, market, budget);
     if (!assessment.allowed) {
       setMessage(assessment.message ?? 'That player cannot be selected.');
       return;
@@ -274,10 +319,11 @@ function SquadStep({
   };
   const obviousBlock = (player: MarketPlayer) => {
     if (selectedIds.has(player.id)) return 'Already selected';
+    if (unreachable.has(player.id)) return 'Out of reach';
     if (counts[player.position] >= POSITION_QUOTAS[player.position])
       return `${player.position} full`;
     if (selected.filter((item) => item.clubId === player.clubId).length >= 3) return 'Club limit';
-    if (cost + player.value > SQUAD_BUDGET) return 'Over budget';
+    if (cost + player.value > budget) return 'Over budget';
     return '';
   };
 
@@ -298,9 +344,10 @@ function SquadStep({
             value={`${counts[item]}/${POSITION_QUOTAS[item]}`}
           />
         ))}
-        <Stat label="Remaining" value={money(SQUAD_BUDGET - cost)} />
+        <Stat label="Remaining" value={money(budget - cost)} />
       </div>
       <p className="budget-guidance">
+        {presetLabel(budgetPreset)} budget {money(budget)}.{' '}
         {completion
           ? `${money(cost + completion.cost)} is the cheapest possible final cost from here.`
           : 'No legal completion is available from the current selection.'}
@@ -321,6 +368,7 @@ function SquadStep({
         <Card className="market-card">
           <MarketList
             players={market}
+            note={(player) => (unreachable.has(player.id) ? reachLabel : undefined)}
             action={(player) => {
               const block = obviousBlock(player);
               return (
@@ -332,10 +380,10 @@ function SquadStep({
                     selectedIds.has(player.id)
                       ? `Remove ${player.name}`
                       : block
-                        ? `${player.name} blocked: ${block}`
+                        ? `${player.name} blocked: ${unreachable.has(player.id) ? reachLabel : block}`
                         : `Add ${player.name}`
                   }
-                  title={block || `Add ${player.name}`}
+                  title={unreachable.has(player.id) ? reachLabel : block || `Add ${player.name}`}
                 >
                   {selectedIds.has(player.id) ? 'Remove' : block || 'Add'}
                 </button>
@@ -412,6 +460,7 @@ function SquadStep({
 }
 
 function LineupStep({
+  budget,
   squad,
   formation,
   setFormation,
@@ -420,6 +469,7 @@ function LineupStep({
   onBack,
   onContinue,
 }: {
+  budget: number;
   squad: MarketPlayer[];
   formation: Formation;
   setFormation: (formation: Formation) => void;
@@ -435,7 +485,7 @@ function LineupStep({
   );
   const starters = startersOf(squad, starterIds);
   const bench = benchOf(squad, starterIds);
-  const errors = validateLineup(squad, starterIds, formation);
+  const errors = validateLineup(squad, starterIds, formation, budget);
   const inspectedPlayer = squad.find((player) => player.id === inspectedId) ?? starters[0];
   const changeFormation = (next: Formation) => {
     const nextStarters = pickFormationXI(squad, next);
@@ -649,6 +699,7 @@ function PredictionStep({
     <SeasonPreview
       identity={{ ...identity, stadium: stadiumName(identity) }}
       replacedName={REPLACED_CLUB.name}
+      budgetLabel={presetLabel(identity.budget)}
       prediction={prediction}
       forecast={forecast}
       forecastDone={forecastDone}
@@ -670,6 +721,7 @@ export function PlayFlow() {
   const [forecastDone, setForecastDone] = useState(false);
   const [predictionError, setPredictionError] = useState('');
   const [predictionRun, setPredictionRun] = useState(0);
+  const budget = budgetOf(identity.budget);
 
   useEffect(() => {
     try {
@@ -707,8 +759,8 @@ export function PlayFlow() {
   useEffect(() => {
     if (
       step !== 'prediction' ||
-      validateSquad(selected).length > 0 ||
-      validateLineup(selected, starterIds, formation).length > 0
+      validateSquad(selected, budget).length > 0 ||
+      validateLineup(selected, starterIds, formation, budget).length > 0
     )
       return;
     setPrediction(null);
@@ -743,7 +795,7 @@ export function PlayFlow() {
       clubName: identity.name,
     });
     return () => worker.terminate();
-  }, [formation, identity.name, predictionRun, selected, starterIds, step]);
+  }, [budget, formation, identity.name, predictionRun, selected, starterIds, step]);
 
   if (!hydrated) return <main className="builder-shell" />;
   return (
@@ -752,12 +804,24 @@ export function PlayFlow() {
       {step === 'identity' ? (
         <IdentityStep
           identity={identity}
-          setIdentity={setIdentity}
+          setIdentity={(next) => {
+            setIdentity(next);
+            // A different budget can make the chosen squad illegal (or a star unreachable), so
+            // the squad starts again rather than carrying an over-budget selection forward.
+            if (next.budget !== identity.budget && selected.length) {
+              const completion = cheapestLegalCompletion(selected, market);
+              if (!completion || squadCost(selected) + completion.cost > budgetOf(next.budget)) {
+                setSelected([]);
+                setStarterIds([]);
+              }
+            }
+          }}
           onContinue={() => setStep('squad')}
         />
       ) : null}
       {step === 'squad' ? (
         <SquadStep
+          budgetPreset={identity.budget}
           selected={selected}
           setSelected={setSelected}
           onBack={() => setStep('identity')}
@@ -769,6 +833,7 @@ export function PlayFlow() {
       ) : null}
       {step === 'lineup' ? (
         <LineupStep
+          budget={budget}
           squad={selected}
           formation={formation}
           setFormation={setFormation}

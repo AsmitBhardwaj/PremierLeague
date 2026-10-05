@@ -29,6 +29,7 @@ export function buildSetup(
   userName: string,
   userSquad: readonly MarketPlayer[],
   seed: number,
+  budget: number = SQUAD_BUDGET,
 ): SeasonSetup {
   const clubs: SeasonClubInput[] = listClubs(market)
     .filter((club) => club.id !== replacedId)
@@ -42,10 +43,10 @@ export function buildSetup(
   return {
     seed,
     userClubId: USER_CLUB_ID,
-    // January window: current market values, the same budget, and the replaced club's players
+    // January window: current market values, the budget chosen at founding, and the replaced club's players
     // (who are on the market but not in the league).
     transferMarket: {
-      budget: SQUAD_BUDGET,
+      budget,
       values,
       outside: [
         {

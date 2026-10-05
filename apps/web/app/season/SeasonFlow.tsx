@@ -11,6 +11,7 @@ import { PickTeam } from '../match/PickTeam';
 import type { MatchPreparation, PendingSubstitution } from '../match/lib/match';
 import type { PlaybackMode } from '../match/lib/timeline';
 import playerData from '../play/data/players.json';
+import { budgetOf, presetLabel } from '../play/lib/budget';
 import { listClubs } from '../play/lib/clubs';
 import {
   STORAGE_KEY,
@@ -203,7 +204,12 @@ export function SeasonFlow() {
         if (
           !flow ||
           flow.identity.name.trim() === '' ||
-          validateLineup(flow.selected, flow.starterIds, flow.formation).length
+          validateLineup(
+            flow.selected,
+            flow.starterIds,
+            flow.formation,
+            budgetOf(flow.identity.budget),
+          ).length
         ) {
           if (!cancelled) setStage('noclub');
           return;
@@ -498,7 +504,9 @@ export function SeasonFlow() {
             <h1>{band.title}</h1>
           </div>
           <div className="mt-band-club">
-            <strong>{view.identity.name}</strong>
+            <strong>
+              {view.identity.name} · {presetLabel(view.identity.budget)}
+            </strong>
             <p>{ordinal(position)} in the league</p>
           </div>
         </div>

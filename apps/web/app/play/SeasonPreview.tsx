@@ -31,12 +31,13 @@ export function previewShareText(
   clubName: string,
   prediction: SeasonPrediction,
   forecast: ForecastSummary | null,
+  budgetLabel?: string,
 ): string {
   const finish = finishRange(prediction.positionDistribution);
   const verdict = verdictOf(prediction);
   const stats = prediction.teamStats;
   const parts = [
-    `${clubName}: ${verdict.label}. Most likely ${ordinal(finish.likely)}, anywhere from ${ordinal(finish.best)} to ${ordinal(finish.worst)}.`,
+    `${clubName}${budgetLabel ? ` (${budgetLabel})` : ''}: ${verdict.label}. Most likely ${ordinal(finish.likely)}, anywhere from ${ordinal(finish.best)} to ${ordinal(finish.worst)}.`,
   ];
   if (stats) {
     parts.push(
@@ -93,6 +94,7 @@ function PlayerLine({
 export function SeasonPreview({
   identity,
   replacedName,
+  budgetLabel,
   prediction,
   forecast,
   forecastDone,
@@ -101,6 +103,8 @@ export function SeasonPreview({
 }: {
   identity: ClubIdentity;
   replacedName: string;
+  /** The difficulty chosen at founding, e.g. "Underdog". */
+  budgetLabel: string;
   prediction: SeasonPrediction;
   forecast: ForecastSummary | null;
   /** The player batch has finished (it may have produced nothing). */
@@ -114,7 +118,7 @@ export function SeasonPreview({
   const verdict = verdictOf(prediction);
   const stats = prediction.teamStats;
   const picks = fixturePicks(prediction.perOpponentExpectedPoints);
-  const shareText = previewShareText(identity.name, prediction, forecast);
+  const shareText = previewShareText(identity.name, prediction, forecast, budgetLabel);
   const share = async () => {
     try {
       if (navigator.share) {
@@ -149,7 +153,9 @@ export function SeasonPreview({
         <div className="pv-identity">
           {crest}
           <div>
-            <strong>{identity.name}</strong>
+            <strong>
+              {identity.name} · {budgetLabel}
+            </strong>
             <span>
               {identity.stadium} · replacing {replacedName} in a 20-club league
             </span>

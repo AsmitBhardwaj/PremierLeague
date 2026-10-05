@@ -1,3 +1,4 @@
+import { DEFAULT_BUDGET_PRESET, budgetOf, parseBudgetPreset, type BudgetPreset } from './budget';
 import {
   FORMATIONS,
   validateFormation,
@@ -16,6 +17,11 @@ export interface ClubIdentity {
   primaryColor: string;
   secondaryColor: string;
   crestShape: CrestShape;
+  /**
+   * Difficulty chosen when founding the club. It travels with the identity into the season save
+   * (which replays the January window under it); a save without it is a Standard season.
+   */
+  budget: BudgetPreset;
 }
 
 export interface SavedFlow {
@@ -39,6 +45,7 @@ export const emptyIdentity: ClubIdentity = {
   primaryColor: '#f7f8f8',
   secondaryColor: '#1c1d1f',
   crestShape: 'shield',
+  budget: DEFAULT_BUDGET_PRESET,
 };
 
 const steps: Step[] = ['identity', 'squad', 'lineup', 'prediction'];
@@ -99,6 +106,7 @@ export function parseSavedFlow(
           ? savedIdentity.secondaryColor
           : emptyIdentity.secondaryColor,
       crestShape,
+      budget: parseBudgetPreset(savedIdentity.budget),
     };
     const selectedIds = strings(value.selectedIds);
     const starterIds = strings(value.starterIds);
@@ -116,7 +124,7 @@ export function parseSavedFlow(
       selected.some((player) => player.id === id),
     );
     const identityValid = Object.keys(validateIdentity(identity)).length === 0;
-    const squadValid = validateSquad(selected).length === 0;
+    const squadValid = validateSquad(selected, budgetOf(identity.budget)).length === 0;
     const lineupValid =
       squadValid && validateFormation(selected, cleanStarterIds, formation).length === 0;
     const step = !identityValid

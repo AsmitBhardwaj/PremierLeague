@@ -15,8 +15,9 @@ import {
 } from '@pl/engine';
 import playerData from '../play/data/players.json';
 import { buildOpponentTeams, computeReplacedClub } from '../play/lib/clubs';
+import { budgetOf, parseBudgetPreset } from '../play/lib/budget';
 import type { ClubIdentity } from '../play/lib/persistence';
-import { createPredictionTeam, type MarketPlayer } from '../play/lib/squad';
+import { createPredictionTeam, squadCost, type MarketPlayer } from '../play/lib/squad';
 import { runForecast } from '../play/lib/forecast';
 import { fixtureOdds } from '../match/lib/odds';
 import type {
@@ -173,7 +174,9 @@ function create(request: Extract<SeasonMessage, { kind: 'create' }>): void {
   const squad = squadOf(request.squadIds);
   if (!squad) throw new Error('The saved squad contains players that no longer exist.');
   const replaced = computeReplacedClub(market);
-  const setup = buildSetup(market, replaced.id, request.identity.name, squad, request.seed);
+  const budget = budgetOf(request.identity.budget);
+  if (squadCost(squad) > budget) throw new Error('That squad is over the chosen budget.');
+  const setup = buildSetup(market, replaced.id, request.identity.name, squad, request.seed, budget);
   const next = new Career(setup);
   next.apply({
     type: 'lineup',
@@ -227,8 +230,19 @@ function resume(raw: unknown): void {
   const squad = squadOf(save.squadIds);
   if (!squad)
     throw Object.assign(new Error('The saved squad is unreadable.'), { reason: 'corrupt' });
-  const identity = save.identity as ClubIdentity;
-  const setup = buildSetup(market, save.replacedClubId, identity.name, squad, save.seed);
+  // A save from before budget presets has no `budget` and was played at Standard.
+  const identity: ClubIdentity = {
+    ...(save.identity as ClubIdentity),
+    budget: parseBudgetPreset((save.identity as Partial<ClubIdentity>).budget),
+  };
+  const setup = buildSetup(
+    market,
+    save.replacedClubId,
+    identity.name,
+    squad,
+    save.seed,
+    budgetOf(identity.budget),
+  );
   const result = replayCareer(save, setup, marketDataVersion(market));
   if (!result.ok) {
     throw Object.assign(

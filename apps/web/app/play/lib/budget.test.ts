@@ -4,6 +4,7 @@ import { BUDGET_PRESET_ORDER, DEFAULT_BUDGET_PRESET, budgetOf, parseBudgetPreset
 import { emptyIdentity, parseSavedFlow } from './persistence';
 import {
   SQUAD_BUDGET,
+  formatMoney,
   assessSelection,
   cheapestLegalCompletion,
   outOfReach,
@@ -14,11 +15,20 @@ import {
 const market = playerData as MarketPlayer[];
 
 describe('budget presets', () => {
-  it('are £175m, £275m and £400m, with Standard the default and the engine-tuned budget', () => {
-    expect(BUDGET_PRESET_ORDER.map((p) => budgetOf(p))).toEqual([1750, 2750, 4000]);
+  it('are £175m, £275m, £400m and £1b, with Standard the default and the engine-tuned budget', () => {
+    expect(BUDGET_PRESET_ORDER.map((p) => budgetOf(p))).toEqual([1750, 2750, 4000, 10000]);
     expect(DEFAULT_BUDGET_PRESET).toBe('standard');
     expect(budgetOf('standard')).toBe(SQUAD_BUDGET);
     expect(emptyIdentity.budget).toBe('standard');
+  });
+
+  it('shows Takeover as £1b and the others in millions', () => {
+    expect(BUDGET_PRESET_ORDER.map((p) => formatMoney(budgetOf(p)))).toEqual([
+      '£175m',
+      '£275m',
+      '£400m',
+      '£1b',
+    ]);
   });
 
   it('read a missing or unknown saved value as Standard', () => {

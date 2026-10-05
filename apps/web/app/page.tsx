@@ -330,7 +330,8 @@ export default function Home() {
               <div>
                 <strong>{money(SQUAD_BUDGET)}</strong>
                 <p>
-                  Standard budget. Go Underdog for a harder season or Big spender for an easier one.
+                  Standard budget. Go Underdog for a harder season, Big spender for an easier one,
+                  or Takeover to sign anyone.
                 </p>
                 <i className="budget-bar" aria-hidden="true" />
               </div>

@@ -3,9 +3,11 @@ import type { Player, Position, Team } from '@pl/engine';
 /** The Standard budget in tenths of £m (our own valuations): £275.0m. Presets: `./budget`. */
 export const SQUAD_BUDGET = 2750;
 
-/** Tenths of £m as a display string: whole millions stay whole, e.g. £175m, £12.5m, £0.9m. */
+/** Tenths of £m as a display string: whole millions stay whole, e.g. £1b, £175m, £12.5m, £0.9m. */
 export const formatMoney = (units: number): string =>
-  `£${units % 10 === 0 ? String(units / 10) : (units / 10).toFixed(1)}m`;
+  units >= 10000 && units % 10000 === 0
+    ? `£${units / 10000}b`
+    : `£${units % 10 === 0 ? String(units / 10) : (units / 10).toFixed(1)}m`;
 export const SQUAD_SIZE = 18;
 export const MAX_PER_REAL_CLUB = 3;
 export const POSITION_QUOTAS: Record<Position, number> = {

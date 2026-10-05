@@ -46,13 +46,13 @@
     "seasons": 10000,
     "seed": 2103,
     "replacedClubId": "IPS",
-    "meanPoints": 53.8406,
+    "meanPoints": 53.4112,
     "pointsDistribution": [
       {
         "min": 25,
         "max": 29,
-        "count": 2,
-        "probability": 0.0002
+        "count": 3,
+        "probability": 0.0003
       },
       {
         "min": 30,
@@ -63,150 +63,144 @@
       {
         "min": 35,
         "max": 39,
-        "count": 247,
-        "probability": 0.0247
+        "count": 279,
+        "probability": 0.0279
       },
       {
         "min": 40,
         "max": 44,
-        "count": 853,
-        "probability": 0.0853
+        "count": 904,
+        "probability": 0.0904
       },
       {
         "min": 45,
         "max": 49,
-        "count": 1711,
-        "probability": 0.1711
+        "count": 1858,
+        "probability": 0.1858
       },
       {
         "min": 50,
         "max": 54,
-        "count": 2531,
-        "probability": 0.2531
+        "count": 2471,
+        "probability": 0.2471
       },
       {
         "min": 55,
         "max": 59,
-        "count": 2296,
-        "probability": 0.2296
+        "count": 2282,
+        "probability": 0.2282
       },
       {
         "min": 60,
         "max": 64,
-        "count": 1466,
-        "probability": 0.1466
+        "count": 1406,
+        "probability": 0.1406
       },
       {
         "min": 65,
         "max": 69,
-        "count": 623,
-        "probability": 0.0623
+        "count": 592,
+        "probability": 0.0592
       },
       {
         "min": 70,
         "max": 74,
-        "count": 178,
-        "probability": 0.0178
+        "count": 125,
+        "probability": 0.0125
       },
       {
         "min": 75,
         "max": 79,
-        "count": 35,
-        "probability": 0.0035
+        "count": 25,
+        "probability": 0.0025
       },
       {
         "min": 80,
         "max": 84,
-        "count": 7,
-        "probability": 0.0007
-      },
-      {
-        "min": 85,
-        "max": 89,
-        "count": 1,
-        "probability": 0.0001
+        "count": 5,
+        "probability": 0.0005
       }
     ],
     "positionDistribution": [
       {
         "position": 1,
-        "count": 9,
-        "probability": 0.0009
+        "count": 4,
+        "probability": 0.0004
       },
       {
         "position": 2,
-        "count": 75,
-        "probability": 0.0075
+        "count": 41,
+        "probability": 0.0041
       },
       {
         "position": 3,
-        "count": 215,
-        "probability": 0.0215
+        "count": 134,
+        "probability": 0.0134
       },
       {
         "position": 4,
-        "count": 467,
-        "probability": 0.0467
+        "count": 368,
+        "probability": 0.0368
       },
       {
         "position": 5,
-        "count": 628,
-        "probability": 0.0628
+        "count": 514,
+        "probability": 0.0514
       },
       {
         "position": 6,
-        "count": 830,
-        "probability": 0.083
+        "count": 770,
+        "probability": 0.077
       },
       {
         "position": 7,
-        "count": 939,
-        "probability": 0.0939
+        "count": 1011,
+        "probability": 0.1011
       },
       {
         "position": 8,
-        "count": 965,
-        "probability": 0.0965
+        "count": 1024,
+        "probability": 0.1024
       },
       {
         "position": 9,
-        "count": 1033,
-        "probability": 0.1033
+        "count": 1041,
+        "probability": 0.1041
       },
       {
         "position": 10,
-        "count": 923,
-        "probability": 0.0923
+        "count": 1021,
+        "probability": 0.1021
       },
       {
         "position": 11,
-        "count": 838,
-        "probability": 0.0838
+        "count": 915,
+        "probability": 0.0915
       },
       {
         "position": 12,
-        "count": 794,
-        "probability": 0.0794
+        "count": 826,
+        "probability": 0.0826
       },
       {
         "position": 13,
-        "count": 644,
-        "probability": 0.0644
+        "count": 662,
+        "probability": 0.0662
       },
       {
         "position": 14,
-        "count": 539,
-        "probability": 0.0539
+        "count": 584,
+        "probability": 0.0584
       },
       {
         "position": 15,
-        "count": 441,
-        "probability": 0.0441
+        "count": 417,
+        "probability": 0.0417
       },
       {
         "position": 16,
-        "count": 327,
-        "probability": 0.0327
+        "count": 344,
+        "probability": 0.0344
       },
       {
         "position": 17,
@@ -215,157 +209,165 @@
       },
       {
         "position": 18,
-        "count": 103,
-        "probability": 0.0103
+        "count": 93,
+        "probability": 0.0093
       },
       {
         "position": 19,
-        "count": 27,
-        "probability": 0.0027
+        "count": 23,
+        "probability": 0.0023
       },
       {
         "position": 20,
-        "count": 1,
-        "probability": 0.0001
+        "count": 6,
+        "probability": 0.0006
       }
     ],
-    "titleProbability": 0.0009,
-    "top4Probability": 0.0766,
-    "relegationProbability": 0.0131,
+    "titleProbability": 0.0004,
+    "top4Probability": 0.0547,
+    "relegationProbability": 0.0122,
     "perOpponentExpectedPoints": [
       {
         "opponentId": "ARS",
         "opponentName": "Arsenal",
-        "home": 1.0251,
-        "away": 0.6795,
-        "total": 1.7046
+        "home": 0.9414,
+        "away": 0.6314,
+        "total": 1.5728
       },
       {
         "opponentId": "AVL",
         "opponentName": "Aston Villa",
-        "home": 1.6476,
-        "away": 1.2813,
-        "total": 2.9289
+        "home": 1.6989,
+        "away": 1.2654,
+        "total": 2.9643
       },
       {
         "opponentId": "BOU",
         "opponentName": "Bournemouth",
-        "home": 1.5634,
-        "away": 1.202,
-        "total": 2.7653999999999996
+        "home": 1.5531,
+        "away": 1.1506,
+        "total": 2.7037
       },
       {
         "opponentId": "BRE",
         "opponentName": "Brentford",
-        "home": 1.7093,
-        "away": 1.3295,
-        "total": 3.0388
+        "home": 1.7467,
+        "away": 1.3396,
+        "total": 3.0862999999999996
       },
       {
         "opponentId": "BHA",
         "opponentName": "Brighton",
-        "home": 1.4666,
-        "away": 1.1213,
-        "total": 2.5879
+        "home": 1.423,
+        "away": 1.0595,
+        "total": 2.4825
       },
       {
         "opponentId": "CHE",
         "opponentName": "Chelsea",
-        "home": 1.2982,
-        "away": 0.9108,
-        "total": 2.209
+        "home": 1.2414,
+        "away": 0.878,
+        "total": 2.1194
       },
       {
         "opponentId": "COV",
         "opponentName": "Coventry City",
-        "home": 2.1532,
-        "away": 1.7751,
-        "total": 3.9283
+        "home": 2.1879,
+        "away": 1.8142,
+        "total": 4.0021
       },
       {
         "opponentId": "CRY",
         "opponentName": "Crystal Palace",
-        "home": 1.7184,
-        "away": 1.316,
-        "total": 3.0343999999999998
+        "home": 1.7574,
+        "away": 1.3983,
+        "total": 3.1557000000000004
       },
       {
         "opponentId": "EVE",
         "opponentName": "Everton",
-        "home": 1.7349,
-        "away": 1.3793,
-        "total": 3.1142000000000003
+        "home": 1.7114,
+        "away": 1.3903,
+        "total": 3.1017
       },
       {
         "opponentId": "FUL",
         "opponentName": "Fulham",
-        "home": 1.9412,
-        "away": 1.5593,
-        "total": 3.5004999999999997
+        "home": 1.9256,
+        "away": 1.551,
+        "total": 3.4766
       },
       {
         "opponentId": "HUL",
         "opponentName": "Hull City",
-        "home": 2.3159,
-        "away": 1.9853,
-        "total": 4.3012
+        "home": 2.3379,
+        "away": 1.9729,
+        "total": 4.3108
       },
       {
         "opponentId": "LEE",
         "opponentName": "Leeds",
-        "home": 1.8174,
-        "away": 1.4252,
-        "total": 3.2426
+        "home": 1.8453,
+        "away": 1.4316,
+        "total": 3.2769
       },
       {
         "opponentId": "LIV",
         "opponentName": "Liverpool",
-        "home": 1.1617,
-        "away": 0.8438,
-        "total": 2.0055
+        "home": 1.1843,
+        "away": 0.8239,
+        "total": 2.0082
       },
       {
         "opponentId": "MCI",
         "opponentName": "Man City",
-        "home": 0.8995,
-        "away": 0.6072,
-        "total": 1.5067
+        "home": 0.8794,
+        "away": 0.5809,
+        "total": 1.4603
       },
       {
         "opponentId": "MUN",
         "opponentName": "Man Utd",
-        "home": 1.4367,
-        "away": 1.0375,
-        "total": 2.4742
+        "home": 1.4284,
+        "away": 1.031,
+        "total": 2.4593999999999996
       },
       {
         "opponentId": "NEW",
         "opponentName": "Newcastle",
-        "home": 1.6364,
-        "away": 1.2656,
-        "total": 2.902
+        "home": 1.6324,
+        "away": 1.244,
+        "total": 2.8764000000000003
       },
       {
         "opponentId": "NFO",
         "opponentName": "Nott'm Forest",
-        "home": 1.5345,
-        "away": 1.2076,
-        "total": 2.7420999999999998
+        "home": 1.5364,
+        "away": 1.1775,
+        "total": 2.7138999999999998
       },
       {
         "opponentId": "TOT",
         "opponentName": "Spurs",
-        "home": 1.3701,
-        "away": 1.022,
-        "total": 2.3921
+        "home": 1.2946,
+        "away": 0.9305,
+        "total": 2.2251
       },
       {
         "opponentId": "SUN",
         "opponentName": "Sunderland",
-        "home": 1.9057,
-        "away": 1.5565,
-        "total": 3.4622
+        "home": 1.8695,
+        "away": 1.5456,
+        "total": 3.4151
       }
-    ]
+    ],
+    "teamStats": {
+      "wins": 14.473,
+      "draws": 9.9922,
+      "losses": 13.5348,
+      "goalsFor": 46.8739,
+      "goalsAgainst": 44.7856,
+      "cleanSheets": 11.9551
+    }
   }
 }

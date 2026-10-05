@@ -14,9 +14,11 @@ import {
   forecastUserSeasons,
   pickSquad,
   predictSeason,
+  simulateMatch,
   type Player,
   type Team,
 } from '@pl/engine';
+import { applyTuningOverrides } from './lib/tuning-overrides';
 import { balancedBuild, optimise } from '../../apps/web/app/play/lib/budget-helpers';
 import {
   buildOpponentTeams,
@@ -33,9 +35,14 @@ import {
   type MarketPlayer,
 } from '../../apps/web/app/play/lib/squad';
 
-const SEASONS = Number(process.argv[2] ?? 200);
+applyTuningOverrides(process.argv.slice(2));
+const SEASONS = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) ?? 200);
+/** Only play the seasons (no prediction, static or batch checks): fast, for tuning sweeps. */
+const PLAYED_ONLY = process.env.PLAYED_ONLY === '1';
 /** Event-engine seasons in the web worker's player-stat batch. */
 const BATCH = Number(process.env.BATCH ?? 12);
+/** Static-engine repeats of the 38 fixtures (no season dynamics): the surrogate's own yardstick. */
+const STATIC_REPEATS = Number(process.env.STATIC ?? 100);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const market = JSON.parse(
   readFileSync(join(root, 'apps', 'web', 'app', 'play', 'data', 'players.json'), 'utf8'),
@@ -54,13 +61,20 @@ const byId = (ids: readonly string[]): MarketPlayer[] =>
   ids.map((id) => market.find((p) => p.id === id)!);
 const cheapest = cheapestLegalCompletion([], market)!;
 const only = process.env.ONLY_LANDING === '1';
-const allSamples: { label: string; squad: MarketPlayer[] }[] = [
-  { label: 'landing sample', squad: byId(LANDING_IDS) },
-  { label: 'balanced', squad: balancedBuild(SQUAD_BUDGET) },
-  { label: 'optimised', squad: optimise(SQUAD_BUDGET) },
-  { label: 'cheapest legal', squad: byId(cheapest.playerIds) },
+const onlyLabels = process.env.ONLY?.split(',');
+const builders: { label: string; build: () => MarketPlayer[] }[] = [
+  { label: 'landing sample', build: () => byId(LANDING_IDS) },
+  { label: 'balanced', build: () => balancedBuild(SQUAD_BUDGET) },
+  { label: 'optimised', build: () => optimise(SQUAD_BUDGET) },
+  { label: 'cheapest legal', build: () => byId(cheapest.playerIds) },
 ];
-const samples = only ? allSamples.slice(0, 1) : allSamples;
+// Squads are built only when played (the optimiser is slow), so a sweep can ask for one.
+const chosen = onlyLabels
+  ? builders.filter((x) => onlyLabels.some((l) => x.label.startsWith(l)))
+  : only
+    ? builders.slice(0, 1)
+    : builders;
+const samples = chosen.map(({ label, build }) => ({ label, squad: build() }));
 
 const replaced = computeReplacedClub(market);
 const realClubs = listClubs(market)
@@ -204,6 +218,8 @@ for (const { label, squad } of samples) {
         .padStart(4)}/${(100 * prediction.relegationProbability).toFixed(1).padEnd(4)}`,
   );
 
+  if (PLAYED_ONLY) continue;
+
   // ---- season-preview stats: surrogate team stats and the player batch against played seasons
   const lineup = {
     formation: team.formation,
@@ -220,10 +236,41 @@ for (const { label, squad } of samples) {
     { seasons: BATCH, seed: 7, lineup },
   );
   const batchMs = performance.now() - startedAt;
+  // The same 38 fixtures against fresh opponents with no season dynamics, many times over. The
+  // surrogate is fitted to exactly this, so it separates the fit from what dynamics change.
+  const opponents = buildOpponentTeams(market, replaced.id, squad);
+  const fixed = { w: 0, d: 0, l: 0, gf: 0, ga: 0, cs: 0 };
+  let staticSeed = 77_000;
+  for (let r = 0; r < STATIC_REPEATS; r++) {
+    for (const opponent of opponents) {
+      for (const home of [true, false]) {
+        const result = simulateMatch({
+          home: home ? team : opponent,
+          away: home ? opponent : team,
+          seed: staticSeed++,
+        });
+        const scored = home ? result.score.home : result.score.away;
+        const conceded = home ? result.score.away : result.score.home;
+        fixed.gf += scored;
+        fixed.ga += conceded;
+        if (conceded === 0) fixed.cs++;
+        if (scored > conceded) fixed.w++;
+        else if (scored === conceded) fixed.d++;
+        else fixed.l++;
+      }
+    }
+  }
+  for (const key of Object.keys(fixed) as (keyof typeof fixed)[]) fixed[key] /= STATIC_REPEATS;
   const pct = (a: number, b: number): string =>
     `${a >= b ? '+' : ''}${((100 * (a - b)) / b).toFixed(1)}%`;
-  const row = (name: string, pred: number, batchValue: number | null, actual: number): string =>
-    `  ${name.padEnd(15)} played ${actual.toFixed(1).padStart(6)} | surrogate ${pred.toFixed(1).padStart(6)} (${pct(pred, actual).padStart(7)})` +
+  const row = (
+    name: string,
+    pred: number,
+    batchValue: number | null,
+    actual: number,
+    fixedValue: number | null,
+  ): string =>
+    `  ${name.padEnd(15)} played ${actual.toFixed(1).padStart(6)} | static ${fixedValue === null ? '   n/a' : fixedValue.toFixed(1).padStart(6)} (${fixedValue === null ? '    ' : pct(fixedValue, actual).padStart(7)}) | surrogate ${pred.toFixed(1).padStart(6)} (${pct(pred, actual).padStart(7)} played, ${fixedValue === null ? '  n/a' : pct(pred, fixedValue).padStart(7)} static)` +
     (batchValue === null
       ? ''
       : ` | batch ${batchValue.toFixed(1).padStart(6)} (${pct(batchValue, actual).padStart(7)})`);
@@ -231,28 +278,32 @@ for (const { label, squad } of samples) {
   console.log(
     `  -- ${label}: preview stats (batch ${BATCH} seasons in ${batchMs.toFixed(0)} ms in Node)`,
   );
-  console.log(row('wins', ts.wins, batch.team.wins, mean(played.wins)));
-  console.log(row('draws', ts.draws, batch.team.draws, mean(played.draws)));
-  console.log(row('losses', ts.losses, batch.team.losses, mean(played.losses)));
-  console.log(row('goals scored', ts.goalsFor, batch.team.goalsFor, mean(played.goalsFor)));
+  console.log(row('wins', ts.wins, batch.team.wins, mean(played.wins), fixed.w));
+  console.log(row('draws', ts.draws, batch.team.draws, mean(played.draws), fixed.d));
+  console.log(row('losses', ts.losses, batch.team.losses, mean(played.losses), fixed.l));
   console.log(
-    row('goals conceded', ts.goalsAgainst, batch.team.goalsAgainst, mean(played.goalsAgainst)),
+    row('goals scored', ts.goalsFor, batch.team.goalsFor, mean(played.goalsFor), fixed.gf),
   );
   console.log(
-    row('clean sheets', ts.cleanSheets, batch.team.cleanSheets, mean(played.cleanSheets)),
-  );
-  console.log(
-    row('yellow cards', NaN, batch.team.yellowCards, mean(played.yellowCards)).replace(
-      /surrogate\s+NaN \(\s*NaN%\)/,
-      'surrogate    n/a',
+    row(
+      'goals conceded',
+      ts.goalsAgainst,
+      batch.team.goalsAgainst,
+      mean(played.goalsAgainst),
+      fixed.ga,
     ),
   );
   console.log(
-    row('red cards', NaN, batch.team.redCards, mean(played.redCards)).replace(
-      /surrogate\s+NaN \(\s*NaN%\)/,
-      'surrogate    n/a',
-    ),
+    row('clean sheets', ts.cleanSheets, batch.team.cleanSheets, mean(played.cleanSheets), fixed.cs),
   );
+  for (const [name, batchValue, actual] of [
+    ['yellow cards', batch.team.yellowCards, mean(played.yellowCards)],
+    ['red cards', batch.team.redCards, mean(played.redCards)],
+  ] as const) {
+    console.log(
+      `  ${name.padEnd(15)} played ${actual.toFixed(1).padStart(6)} | batch ${batchValue.toFixed(1).padStart(6)} (${pct(batchValue, actual).padStart(7)})`,
+    );
+  }
   const avg = (id: string) => {
     const l = playerTotals.get(id);
     return l

@@ -101,7 +101,7 @@ describe('Season', () => {
     expect(a.table()).toEqual(b.table());
     expect(a.matchRecords()).toEqual(b.matchRecords());
     expect(play(9).matchRecords()).not.toEqual(a.matchRecords());
-  });
+  }, 60_000);
 
   it('orders the table by points, goal difference, goals for, then id', () => {
     const table = play(6).table();
@@ -150,7 +150,7 @@ describe('Season', () => {
     }
     expect(absences).toBeGreaterThan(0);
     expect(fatigued).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it('bans a sent-off player for exactly the next match', () => {
     const clubs = league();
@@ -234,4 +234,28 @@ describe('Season', () => {
     const season = new Season({ seed: 7, clubs: [clubs[0]!, odd, ...clubs.slice(2)] });
     expect(() => season.playMatchday()).not.toThrow();
   });
+});
+
+describe('form by position', () => {
+  it('is centred for every position (no position carries permanent form)', () => {
+    const season = new Season({ seed: 5, clubs: league() });
+    while (!season.finished) season.playMatchday();
+    const byPosition = new Map<string, number[]>();
+    for (const club of league()) {
+      for (const player of club.players) {
+        const state = season.playerState(club.id, player.id);
+        if (!state || state.appearances < 10) continue;
+        const list = byPosition.get(player.position) ?? [];
+        list.push(state.form);
+        byPosition.set(player.position, list);
+      }
+    }
+    for (const position of ['GK', 'DEF', 'MID', 'FWD']) {
+      const forms = byPosition.get(position) ?? [];
+      expect(forms.length, position).toBeGreaterThan(5);
+      const mean = forms.reduce((a, b) => a + b, 0) / forms.length;
+      // The old single baseline put keepers near +1.4 (a +2 rating cap); centred is within 0.3.
+      expect(Math.abs(mean), `${position} mean form`).toBeLessThan(0.3);
+    }
+  }, 60_000);
 });

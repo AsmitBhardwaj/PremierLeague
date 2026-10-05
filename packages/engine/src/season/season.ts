@@ -637,6 +637,7 @@ export class Season {
       const s = this.state.get(p.playerId);
       if (s) s.fitness = p.stamina;
     }
+    const positions = new Map(snapshot.players.map((p) => [p.playerId, p.position]));
     for (const r of result.playerRatings) {
       const s = this.state.get(r.playerId);
       if (!s) continue;
@@ -646,7 +647,8 @@ export class Season {
       s.assists += r.assists;
       // A cameo moves form in proportion to the minutes played (a full match counts in full).
       const weight = (1 - SEASON.formDecay) * Math.min(r.minutesPlayed / 90, 1);
-      s.form = (1 - weight) * s.form + weight * (r.individual - SEASON.formBaseline);
+      const baseline = SEASON.formBaseline[positions.get(r.playerId) ?? 'MID'];
+      s.form = (1 - weight) * s.form + weight * (r.individual - baseline);
     }
     // Both counters are set one over so the end-of-matchday tick leaves the full length.
     for (const p of snapshot.players) {

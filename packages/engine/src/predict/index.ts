@@ -33,6 +33,8 @@ interface BackgroundData {
 
 const DATA = backgroundData as BackgroundData;
 const decodedPoints = new Map<string, Uint8Array>();
+/** Independent Poisson scores overstate scoreless opponents by about 0.3 matches per season. */
+const CLEAN_SHEET_CALIBRATION = 0.3;
 const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 const decodeBase64 = (input: string): Uint8Array => {
@@ -196,7 +198,7 @@ export function predictSeason(
       losses: totals.losses / seasons,
       goalsFor: totals.goalsFor / seasons,
       goalsAgainst: totals.goalsAgainst / seasons,
-      cleanSheets: totals.cleanSheets / seasons,
+      cleanSheets: Math.max(0, totals.cleanSheets / seasons - CLEAN_SHEET_CALIBRATION),
     },
   };
 }
@@ -209,6 +211,8 @@ export {
   expectedGoals,
   samplePoisson,
   simulateSurrogateMatch,
+  ATTACK_KEYS,
+  DEFENCE_KEYS,
   SURROGATE_PARAMETERS,
   surrogateFeatures,
 } from './surrogate';

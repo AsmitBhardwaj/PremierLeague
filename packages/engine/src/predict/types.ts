@@ -54,6 +54,8 @@ export interface PlayerForecast {
   assists: number;
   /** Mean match rating over his appearances. */
   averageRating: number;
+  /** The average rating minus the average for his position (the star player ranks by this). */
+  ratingVsPosition: number;
   /** Appearances a season. */
   appearances: number;
 }

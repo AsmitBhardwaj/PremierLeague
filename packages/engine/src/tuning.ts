@@ -16,7 +16,7 @@ export const TUNING = {
   counterTriggerMaxCol: 2,
 
   /** Logit slope per rating point of difference between attacker and defender. */
-  ratingSlope: 0.031,
+  ratingSlope: 0.033,
   passBase: 0.8,
   safePassBonus: 0.08,
   longBallBase: 0.36,
@@ -44,7 +44,21 @@ export const TUNING = {
   wideShotFactor: 0.7,
   dribbleWeight: 0.16,
   longBallWeight: [0.22, 0.16, 0.09, 0.04, 0, 0] as readonly number[],
-  shotPositionFactor: { GK: 0, DEF: 0.35, MID: 0.8, FWD: 1.2 } as Record<Position, number>,
+  shotPositionFactor: { GK: 0, DEF: 0.35, MID: 1.0, FWD: 1.2 } as Record<Position, number>,
+
+  /**
+   * How much of a player's rating edge over 50 counts in each place a rating decides who finishes
+   * chances (1 = all of it, lower flattens). Without this, one elite forward is picked for, takes
+   * and converts far more of his club's chances than the rating gap justifies (a 46-goal top
+   * scorer). `selectionSkillSpread` is the passing and dribbling edge that decides who has the
+   * ball in the attacking zones; `shotShootingSpread` is the shooting edge in how often he shoots;
+   * `xgShootingSpread` is the shooting edge in the quality of the chance.
+   */
+  selectionSkillSpread: 0.25,
+  shotShootingSpread: 0.4,
+  xgShootingSpread: 0.5,
+  /** Scales the quality (xG) of every open-play shot; restores goals without adding shots. */
+  xgScale: 1.21,
 
   /** Base xG by [column][lane]; lane 1 is central. */
   xgTable: [
@@ -55,8 +69,11 @@ export const TUNING = {
     [0.021, 0.052, 0.021],
     [0.072, 0.155, 0.072],
   ] as readonly (readonly number[])[],
-  penaltyXg: 0.76,
+  /** Base quality of a penalty: about 76% convert, the real rate. */
+  penaltyXg: 0.94,
   keeperSlope: 0.0065,
+  /** Shot quality lost per rating point of the nearest defender's positioning above 50. */
+  pressureSlope: 0.004,
   onTargetBase: 0.38,
   blockedShare: 0.3,
   cornerAfterSave: 0.25,
@@ -65,7 +82,11 @@ export const TUNING = {
 
   foulOnLostDuel: 0.2,
   backgroundFoul: 0.03,
-  penaltyShare: { central: 0.28, wide: 0.1 },
+  /**
+   * Share of fouls in the attacking box (central / wide) that are penalties. About 0.29 penalties
+   * a match, as in the real league; it was 0.9 a match, which made penalties a fifth of all goals.
+   */
+  penaltyShare: { central: 0.086, wide: 0.03 },
   yellowGivenFoul: 0.14,
   /** Referees are slower to book a player who already has a yellow. */
   secondYellowFactor: 0.25,
@@ -129,7 +150,7 @@ export const TUNING = {
   zoneWeight: {
     GK: [0.35, 0, 0, 0, 0, 0],
     DEF: [1, 1, 0.8, 0.3, 0.08, 0.03],
-    MID: [0.2, 0.6, 1, 1, 0.7, 0.3],
+    MID: [0.2, 0.6, 1, 1, 1, 0.6],
     FWD: [0.02, 0.05, 0.25, 0.7, 1, 1],
   } as Record<Position, readonly number[]>,
 } as const;

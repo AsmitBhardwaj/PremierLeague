@@ -4,23 +4,20 @@
 //   pnpm --filter @pl/scripts diagnose-scorers [seasons] [--set path=value ...]
 // `--set` overrides a TUNING constant for this run only (for sweeps), for example
 //   --set penaltyShare.central=0.08 --set zoneWeight.MID.5=0.6
-import { Season, TUNING, type MatchEvent, type MatchResult } from '@pl/engine';
+// Prefix a path with `season.` to override a SEASON constant instead, for example
+//   --set season.formBaseline.GK=6
+import { Season, type MatchEvent, type MatchResult } from '@pl/engine';
 import { loadFplCache } from './lib/fpl-cache';
 import { buildSeasonClubs } from './lib/season-clubs';
+import { applyTuningOverrides } from './lib/tuning-overrides';
 
 const args = process.argv.slice(2);
 const SEASONS = Number(args.find((a) => /^\d+$/.test(a)) ?? 200);
+/** First season seed minus one, so shards of one long run can be pooled (`--offset 400`). */
+const offsetIndex = args.indexOf('--offset');
+const OFFSET = offsetIndex >= 0 ? Number(args[offsetIndex + 1]) : 0;
 
-// Runtime overrides: walk the path into TUNING and replace the leaf.
-for (let i = 0; i < args.length; i++) {
-  if (args[i] !== '--set') continue;
-  const [path, raw] = (args[i + 1] ?? '').split('=');
-  if (!path || raw === undefined || Number.isNaN(Number(raw))) throw new Error('use --set a.b=1.5');
-  const keys = path.split('.');
-  let target: Record<string, unknown> = TUNING as unknown as Record<string, unknown>;
-  for (const key of keys.slice(0, -1)) target = target[key] as Record<string, unknown>;
-  target[keys.at(-1)!] = Number(raw);
-}
+applyTuningOverrides(args);
 
 const { bootstrap, summaries } = loadFplCache();
 const clubs = buildSeasonClubs(bootstrap, summaries);
@@ -67,6 +64,7 @@ const topScorerGoals: number[] = [];
 const topScorerShare: number[] = [];
 const pointsByRank = new Array<number>(20).fill(0);
 const byPosition = new Map<string, { rating: number[]; individual: number[] }>();
+const formByPosition = new Map<string, number[]>();
 let matches = 0;
 let goals = 0;
 let draws = 0;
@@ -77,7 +75,7 @@ let penaltiesAwarded = 0;
 let penaltyGoals = 0;
 
 for (let s = 0; s < SEASONS; s++) {
-  const season = new Season({ seed: s + 1, clubs });
+  const season = new Season({ seed: OFFSET + s + 1, clubs });
   const clubGoals = new Map<string, number>();
   while (!season.finished) {
     season.playMatchday({
@@ -130,6 +128,16 @@ for (let s = 0; s < SEASONS; s++) {
       },
     });
   }
+  // End-of-season form of every regular, by position: no position should sit above or below zero.
+  for (const club of clubs) {
+    for (const player of club.players) {
+      const state = season.playerState(club.id, player.id);
+      if (!state || state.appearances < 10) continue;
+      const list = formByPosition.get(player.position) ?? [];
+      list.push(state.form);
+      formByPosition.set(player.position, list);
+    }
+  }
   season.table().forEach((row, i) => (pointsByRank[i]! += row.points));
   const stats = season.playerStats();
   topScorerGoals.push(Math.max(...stats.map((p) => p.goals)));
@@ -166,6 +174,14 @@ for (const position of ['GK', 'DEF', 'MID', 'FWD']) {
   );
 }
 
+console.log('\nEnd-of-season form by position (regulars with 10+ appearances; 0 is neutral):');
+for (const position of ['GK', 'DEF', 'MID', 'FWD']) {
+  const list = formByPosition.get(position) ?? [];
+  console.log(
+    `${position.padEnd(4)}  mean ${f(mean(list), 3)}  sd ${f(sd(list), 3)}  (rating modifier ${f(2 * mean(list), 2)})`,
+  );
+}
+
 console.log('\nTop individual scorers (average a season):');
 const top = [...totals.values()].sort((a, b) => b.goals - a.goals).slice(0, 8);
 for (const t of top) {
@@ -175,3 +191,6 @@ for (const t of top) {
     `  ${t.name.padEnd(16)} ${t.club} ${t.position}  ${f(t.goals / SEASONS).padStart(5)} goals  ${f(t.assists / SEASONS)} assists  ${f(t.appearances / SEASONS, 0)} apps  ${f(perMatch, 2)} shots/app (${f((100 * perMatch) / (club.shots / club.matches), 0)}% of his club's)  goals/shot ${f(t.goals / t.shots, 3)}`,
   );
 }
+
+if (args.includes('--raw'))
+  console.log(`\nRAW top scorer goals: ${JSON.stringify(topScorerGoals)}`);

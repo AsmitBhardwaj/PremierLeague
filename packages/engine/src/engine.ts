@@ -66,6 +66,8 @@ interface SideState {
 
 type ShotKind = 'open_play' | 'penalty';
 
+/** Keep `spread` of a rating's edge over 50 (see `TUNING.selectionSkillSpread`). */
+const spread = (v: number, k: number): number => 50 + k * (v - 50);
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 const sigmoid = (x: number): number => 1 / (1 + Math.exp(-x));
 const logit = (p: number): number => Math.log(p / (1 - p));
@@ -365,7 +367,7 @@ export class Match {
     const shotW =
       (T.shotWeight[col] ?? 0) *
       (this.zone.lane === 1 ? 1 : T.wideShotFactor) *
-      (0.4 + this.eff(actor, 'shooting') / 100) *
+      (0.4 + spread(this.eff(actor, 'shooting'), T.shotShootingSpread) / 100) *
       T.shotPositionFactor[pos] *
       tac.shot *
       counter;
@@ -554,9 +556,10 @@ export class Match {
     } else {
       const defender = this.pickByZone(def, ZONE_COLS - 1 - col, 'defend', false);
       const pressure = defender ? this.defRating(atk, def, defender, 'positioning', col) : 50;
-      xg = (T.xgTable[col]?.[lane] ?? 0) * (0.45 + (1.1 * shootEff) / 100);
-      xg *= clamp(1 - (pressure - 50) * 0.004, 0.7, 1.3);
-      xg *= T.tactics[def.tactic].xgAgainst;
+      xg =
+        (T.xgTable[col]?.[lane] ?? 0) * (0.45 + (1.1 * spread(shootEff, T.xgShootingSpread)) / 100);
+      xg *= clamp(1 - (pressure - 50) * T.pressureSlope, 0.7, 1.3);
+      xg *= T.tactics[def.tactic].xgAgainst * T.xgScale;
       if (atk.counterMode) xg *= T.counterXgBonus;
     }
     xg = clamp(xg, 0.002, 0.95);
@@ -790,7 +793,9 @@ export class Match {
       const w = T.zoneWeight[p.player.position][col] ?? 0;
       const r = p.player.ratings;
       const skill =
-        kind === 'attack' ? (r.passing + r.dribbling) / 200 : (r.tackling + r.positioning) / 200;
+        kind === 'attack'
+          ? spread((r.passing + r.dribbling) / 2, T.selectionSkillSpread) / 100
+          : (r.tackling + r.positioning) / 200;
       return w * (0.5 + skill);
     });
   }

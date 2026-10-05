@@ -1,6 +1,6 @@
 export { generateFixtures, longestRun, type Fixture, type Round } from './fixtures';
 export { hashSeed } from './hash';
-export { SEASON } from './constants';
+export { SEASON, ratingVsPosition } from './constants';
 export { emptyRow, sortTable, compareRows, addResult, type TableRow } from './table';
 export {
   Season,

@@ -7,6 +7,7 @@ import {
   MIN_AWARD_APPEARANCES,
   cacheOf,
   computeDataVersion,
+  ratingVsPosition,
   replayCareer,
   type CareerSave,
   type SeasonClubInput,
@@ -267,16 +268,32 @@ describe('January window transfers', () => {
   });
 
   it("bring a signing with his real club's injury and fitness", () => {
-    // Seed 3 leaves real players injured at the window; the guard checks the rule is exercised.
-    const career = atWindow(3);
-    const hurt = career.season
-      .clubIds()
-      .flatMap((id) => (id === 'USER' ? [] : career.season.squadOf(id).map((p) => ({ id, p }))))
-      .find(
-        ({ id, p }) =>
-          career.season.outFor(id, p.id) > 0 && !career.squad().some((s) => s.id === p.id),
-      );
-    expect(hurt, 'seed 3 must leave a real player injured at the window').toBeDefined();
+    // Search the seeds in order for a window with a real player injured, so the rule is always
+    // exercised however the engine is tuned (the search itself is deterministic).
+    const injuredAt = (career: Career) => {
+      // The signing must be legal: not already owned, and not from a club the user has three of.
+      const owned = new Map<string, number>();
+      for (const p of career.squad()) {
+        const clubId = career.season.findSignable(p.id)!.clubId;
+        owned.set(clubId, (owned.get(clubId) ?? 0) + 1);
+      }
+      return career.season
+        .clubIds()
+        .flatMap((id) => (id === 'USER' ? [] : career.season.squadOf(id).map((p) => ({ id, p }))))
+        .find(
+          ({ id, p }) =>
+            career.season.outFor(id, p.id) > 0 &&
+            !career.squad().some((s) => s.id === p.id) &&
+            (owned.get(id) ?? 0) < 3,
+        );
+    };
+    let career = atWindow(1);
+    let hurt = injuredAt(career);
+    for (let seed = 2; !hurt && seed <= 20; seed++) {
+      career = atWindow(seed);
+      hurt = injuredAt(career);
+    }
+    expect(hurt, 'one of the first 20 seeds must leave a real player injured').toBeDefined();
     const out = mine(career, hurt!.p.position);
     expect(career.season.outFor('USER', hurt!.p.id)).toBe(0);
     career.apply({ type: 'transfer', out: out.id, in: hurt!.p.id });
@@ -291,9 +308,21 @@ describe('season awards', () => {
   const finish = (seed: number, swap: boolean): Career => {
     const career = atWindow(seed);
     if (swap) {
+      // Sell the forward who has played most, so his season lines must stay in the books.
+      const played = new Map(
+        career.season
+          .playerStats()
+          .filter((line) => line.clubId === 'USER')
+          .map((line) => [line.playerId, line.appearances]),
+      );
+      const out = career
+        .squad()
+        .filter((p) => p.position === 'FWD')
+        .sort((x, y) => (played.get(y.id) ?? 0) - (played.get(x.id) ?? 0))[0]!;
+      expect(played.get(out.id) ?? 0, 'the sold forward must have played').toBeGreaterThan(0);
       career.apply({
         type: 'transfer',
-        out: mine(career, 'FWD').id,
+        out: out.id,
         in: candidate(career, 'FWD', [], 6).player.id,
       });
     }
@@ -329,6 +358,19 @@ describe('season awards', () => {
     const ratings = races.playerOfSeason.map((p) => p.averageRating);
     expect(ratings).toEqual([...ratings].sort((a, b) => b - a));
     expect(new Set(races.topScorer.map((p) => p.playerId)).size).toBe(races.topScorer.length);
+  }, 60_000);
+
+  it('rank the player of the season by rating against his position, not raw rating', () => {
+    const awards = finish(5, false).awards();
+    const winner = awards.playerOfSeason!;
+    expect(winner.ratingVsPosition).toBeCloseTo(
+      ratingVsPosition(winner.averageRating, winner.position),
+      12,
+    );
+    for (const race of [awards.races.playerOfSeason, awards.races.userBestPlayer]) {
+      const edges = race.map((p) => p.ratingVsPosition);
+      expect(edges).toEqual([...edges].sort((a, b) => b - a));
+    }
   }, 60_000);
 
   it("pick the user's own top scorer and best player from his own squad", () => {

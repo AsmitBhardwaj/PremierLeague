@@ -12,6 +12,7 @@ import type {
   Team,
 } from '../types';
 import type { Fixture } from './fixtures';
+import { ratingVsPosition } from './constants';
 import { hashSeed } from './hash';
 import {
   Season,
@@ -105,6 +106,8 @@ export interface AwardLine {
   goals: number;
   assists: number;
   averageRating: number;
+  /** The average rating minus the average for his position, so positions compare fairly. */
+  ratingVsPosition: number;
 }
 
 export interface SeasonAwards {
@@ -140,6 +143,7 @@ const line = (s: PlayerSeasonStat): AwardLine => ({
   goals: s.goals,
   assists: s.assists,
   averageRating: s.appearances ? s.ratingSum / s.appearances : 0,
+  ratingVsPosition: s.appearances ? ratingVsPosition(s.ratingSum / s.appearances, s.position) : 0,
 });
 
 const byGoals = (a: AwardLine, b: AwardLine): number =>
@@ -149,7 +153,9 @@ const byGoals = (a: AwardLine, b: AwardLine): number =>
   a.playerId.localeCompare(b.playerId) ||
   a.clubId.localeCompare(b.clubId);
 
+/** Players of the season rank by rating against their position's average, not raw rating. */
 const byRating = (a: AwardLine, b: AwardLine): number =>
+  b.ratingVsPosition - a.ratingVsPosition ||
   b.averageRating - a.averageRating ||
   b.goals - a.goals ||
   a.playerId.localeCompare(b.playerId) ||
@@ -351,6 +357,7 @@ export class Career {
         assists,
         appearances,
         averageRating: total / appearances,
+        ratingVsPosition: ratingVsPosition(total / appearances, seen.position),
       });
     }
     const all = [...merged.values()];

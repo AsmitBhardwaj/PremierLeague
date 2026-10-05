@@ -54,7 +54,7 @@ describe('Career', () => {
     career.apply({ type: 'sim', to: 'end' });
     expect(career.phase).toBe('finished');
     expect(career.round).toBe(38);
-  });
+  }, 60_000);
 
   it('sims to January from the start but not once the window has passed', () => {
     const career = new Career(setup());

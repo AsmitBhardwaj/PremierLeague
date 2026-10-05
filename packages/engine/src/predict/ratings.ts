@@ -1,5 +1,5 @@
 import { overall } from '../squads';
-import type { Player, Team } from '../types';
+import type { Player, Position, Team } from '../types';
 
 export interface TeamAggregateRatings {
   attack: number;
@@ -65,11 +65,25 @@ export interface TeamProfile {
   pace: number;
   keeper: number;
   forwardShooting: number;
+  /**
+   * Mean of tackling and positioning over the defenders (over the outfield when there are none).
+   * Defending near the goal is done mostly by defenders, so a side whose midfield tackles hard
+   * (which lifts the all-outfield `tackling` mean) is not a side with a hard-to-beat defence.
+   */
+  defenderDefending: number;
+  /** The same over the midfielders. */
+  midfieldDefending: number;
   /** Formation shape on the rating scale: 65 at four defenders, 5 points per defender more or fewer. */
   defenders: number;
   /** Likewise 65 at two forwards. */
   forwards: number;
 }
+
+const defending = (players: readonly Player[], position: Position): number => {
+  const group = players.filter((player) => player.position === position);
+  const of = group.length ? group : players;
+  return mean(of.map(({ ratings }) => (ratings.tackling + ratings.positioning) / 2));
+};
 
 export function teamProfile(team: Team): TeamProfile {
   const players = outfield(team);
@@ -92,6 +106,8 @@ export function teamProfile(team: Team): TeamProfile {
     forwardShooting: forwards.length
       ? mean(forwards.map(({ ratings }) => ratings.shooting))
       : shooting,
+    defenderDefending: defending(players, 'DEF'),
+    midfieldDefending: defending(players, 'MID'),
     defenders: 65 + 5 * (players.filter((player) => player.position === 'DEF').length - 4),
     forwards: 65 + 5 * (forwards.length - 2),
   };

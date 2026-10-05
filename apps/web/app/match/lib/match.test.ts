@@ -58,7 +58,13 @@ describe('match session', () => {
     const team = createUserMatchTeam(prep);
     const off = team.players.find((player) => player.position === 'DEF')!;
     const on = team.bench!.find((player) => player.position === 'DEF')!;
-    const wrong = team.bench!.find((player) => player.position !== 'DEF')!;
+    const state = new Map(half.players.map((player) => [player.playerId, player]));
+    const wrong = team.bench!.find(
+      (player) =>
+        player.position !== 'DEF' &&
+        !state.get(player.id)?.onPitch &&
+        !state.get(player.id)?.sentOff,
+    )!;
     expect(validateSubstitution(team, 'home', half, { off: off.id, on: on.id })).toBeNull();
     expect(validateSubstitution(team, 'home', half, { off: on.id, on: off.id })).toMatch(
       /not available/,

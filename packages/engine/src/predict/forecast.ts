@@ -1,4 +1,5 @@
 import { hashSeed } from '../season/hash';
+import { ratingVsPosition } from '../season/constants';
 import { Season, type SeasonSetup, type UserLineup } from '../season/season';
 import type { Position } from '../types';
 import type { ForecastSummary, PlayerForecast, TeamForecast } from './types';
@@ -10,7 +11,7 @@ export interface SeasonBatchForecast {
   players: PlayerForecast[];
   topScorer: PlayerForecast | null;
   topAssister: PlayerForecast | null;
-  /** Highest average rating among players who play most weeks. */
+  /** Best average rating against his position's average, among players who play most weeks. */
   starPlayer: PlayerForecast | null;
 }
 
@@ -121,6 +122,7 @@ export function forecastUserSeasons(
     goals: l.goals / seasons,
     assists: l.assists / seasons,
     averageRating: l.apps ? l.rating / l.apps : 0,
+    ratingVsPosition: l.apps ? ratingVsPosition(l.rating / l.apps, l.position) : 0,
     appearances: l.apps / seasons,
   }));
   const minApps = options.starMinAppearances ?? 15;
@@ -141,6 +143,6 @@ export function forecastUserSeasons(
     players,
     topScorer: [...players].sort(better((p) => p.goals))[0] ?? null,
     topAssister: [...players].sort(better((p) => p.assists))[0] ?? null,
-    starPlayer: [...regulars].sort(better((p) => p.averageRating))[0] ?? null,
+    starPlayer: [...regulars].sort(better((p) => p.ratingVsPosition))[0] ?? null,
   };
 }

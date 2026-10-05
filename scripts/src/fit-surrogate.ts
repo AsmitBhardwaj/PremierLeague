@@ -4,9 +4,12 @@ import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ATTACK_KEYS,
+  DEFENCE_KEYS,
   teamProfile,
   buildClubs,
   createSyntheticTeam,
+  pickSquad,
   simulateMatch,
   surrogateFeatures,
   type SurrogateParameters,
@@ -16,9 +19,10 @@ import { readFileSync } from 'node:fs';
 import { createRng } from '@pl/engine';
 import { loadFplCache } from './lib/fpl-cache';
 import { balancedBuild } from '../../apps/web/app/play/lib/budget-helpers';
-import { noisyGreedySquads, randomLegalSquads } from './lib/random-squads';
+import { noisyGreedySquads, randomLegalSquads, roleSkewedSquads } from './lib/random-squads';
 import {
   createPredictionTeam,
+  cheapestLegalCompletion,
   pickFormationXI,
   type MarketPlayer,
 } from '../../apps/web/app/play/lib/squad';
@@ -26,6 +30,7 @@ import {
 const REPEATS = Number(process.argv[2] ?? 30);
 const RANDOM_SQUADS = Number(process.argv[3] ?? 120);
 const GREEDY_SQUADS = Number(process.argv[4] ?? 60);
+const ROLE_SQUADS = Number(process.argv[5] ?? 90);
 const OUT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -46,6 +51,8 @@ const PROFILE_NAMES = [
   'Pace',
   'Keeper',
   'ForwardShooting',
+  'DefenderDefending',
+  'MidfieldDefending',
   'Defenders',
   'Forwards',
 ];
@@ -56,11 +63,15 @@ const ratingNames = [
 const FEATURE_NAMES = [
   'intercept',
   'isHome',
+  'lowAttack',
   ...ratingNames,
   ...ratingNames.map((n) => `${n}Squared`),
+  ...ATTACK_KEYS.flatMap((attack) =>
+    DEFENCE_KEYS.map((defence) => `own${attack}Xopponent${defence}`),
+  ),
 ];
 const template: SurrogateParameters = {
-  version: 3,
+  version: 6,
   ratingCenter: 65,
   ratingScale: 10,
   featureNames: FEATURE_NAMES,
@@ -186,6 +197,18 @@ const prefixed = (team: Team, prefix: string): Team => ({
   players: team.players.map((p) => ({ ...p, id: `${prefix}${p.id}` })),
   bench: team.bench?.map((p) => ({ ...p, id: `${prefix}${p.id}` })),
 });
+// Anchor the legal floor explicitly. The general user distribution starts at £120m because that is
+// where plausible builds live, but the £29m rules-check squad must not be an extrapolation.
+const cheapest = cheapestLegalCompletion([], market);
+if (!cheapest) throw new Error('No legal squad');
+const cheapestPlayers = cheapest.playerIds.map((id) => market.find((p) => p.id === id)!);
+const cheapestTeam = prefixed(pickSquad('CHEAP', 'Cheapest legal', cheapestPlayers), 'cheap:');
+for (const club of real) {
+  matchups.push(
+    { home: cheapestTeam, away: club, weight: 8 },
+    { home: club, away: cheapestTeam, weight: 8 },
+  );
+}
 // Random legal squads, plus rating-led "sensible" ones (balanced builds at a spread of budgets and
 // noisy greedy builds). The £275m balanced build is left out so the prediction-honesty check on it
 // stays a held-out test.
@@ -194,6 +217,7 @@ const userSquads = [
   ...randomLegalSquads(market, RANDOM_SQUADS, 424_242),
   ...sensibleBudgets.map((budget) => balancedBuild(budget)),
   ...noisyGreedySquads(market, GREEDY_SQUADS, 90_210),
+  ...roleSkewedSquads(market, ROLE_SQUADS, 31_415),
 ];
 const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '4-5-1', '3-4-3'] as const;
 const formationRng = createRng(5150);

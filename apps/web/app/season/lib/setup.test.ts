@@ -31,8 +31,8 @@ describe('season setup from the real market', () => {
     expect(buildSetup(market, replaced.id, 'Test FC', squad, 11).transferMarket?.budget).toBe(
       SQUAD_BUDGET,
     );
-    expect(buildSetup(market, replaced.id, 'Test FC', squad, 11, 1500).transferMarket?.budget).toBe(
-      1500,
+    expect(buildSetup(market, replaced.id, 'Test FC', squad, 11, 1750).transferMarket?.budget).toBe(
+      1750,
     );
   });
 

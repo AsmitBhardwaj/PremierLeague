@@ -43,7 +43,7 @@ const PLAYED_ONLY = process.env.PLAYED_ONLY === '1';
 const BATCH = Number(process.env.BATCH ?? 12);
 /** Static-engine repeats of the 38 fixtures (no season dynamics): the surrogate's own yardstick. */
 const STATIC_REPEATS = Number(process.env.STATIC ?? 100);
-/** Budget in tenths of £m for the balanced and optimised builds (a difficulty preset: 1500, 2750, 4000). */
+/** Budget in tenths of £m for the balanced and optimised builds (a difficulty preset: 1750, 2750, 4000). */
 const BUDGET = Number(process.env.BUDGET ?? SQUAD_BUDGET);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const market = JSON.parse(

@@ -14,8 +14,8 @@ import {
 const market = playerData as MarketPlayer[];
 
 describe('budget presets', () => {
-  it('are £150m, £275m and £400m, with Standard the default and the engine-tuned budget', () => {
-    expect(BUDGET_PRESET_ORDER.map((p) => budgetOf(p))).toEqual([1500, 2750, 4000]);
+  it('are £175m, £275m and £400m, with Standard the default and the engine-tuned budget', () => {
+    expect(BUDGET_PRESET_ORDER.map((p) => budgetOf(p))).toEqual([1750, 2750, 4000]);
     expect(DEFAULT_BUDGET_PRESET).toBe('standard');
     expect(budgetOf('standard')).toBe(SQUAD_BUDGET);
     expect(emptyIdentity.budget).toBe('standard');
@@ -59,7 +59,7 @@ describe('budget presets', () => {
   it('enforces the chosen budget in squad validation', () => {
     const cheapest = cheapestLegalCompletion([], market)!;
     const squad = cheapest.playerIds.map((id) => market.find((p) => p.id === id)!);
-    expect(validateSquad(squad, 1500)).toEqual([]);
+    expect(validateSquad(squad, 1750)).toEqual([]);
     expect(validateSquad(squad, cheapest.cost - 1)).toContain(
       `The squad is over the £${((cheapest.cost - 1) / 10).toFixed(1)}m budget.`,
     );

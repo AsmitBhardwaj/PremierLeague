@@ -5,7 +5,7 @@ export const BUDGET_PRESETS: Record<
   BudgetPreset,
   { label: string; budget: number; blurb: string }
 > = {
-  underdog: { label: 'Underdog', budget: 1500, blurb: 'Hard. Stars are out of reach.' },
+  underdog: { label: 'Underdog', budget: 1750, blurb: 'Hard. The top stars are out of reach.' },
   standard: { label: 'Standard', budget: 2750, blurb: 'The intended balance.' },
   big_spender: { label: 'Big spender', budget: 4000, blurb: 'Easy. Room for several stars.' },
 };

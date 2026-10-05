@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   about,
+  againstPosition,
   finishRange,
   fixturePicks,
   oddsPhrase,
@@ -122,5 +123,13 @@ describe('number formats', () => {
     const stats = { wins: 14.4, draws: 9.3, losses: 14.3 };
     expect(recordLine(stats)).toBe('14–9–15');
     expect(pointsFrom(stats)).toBe(51);
+  });
+});
+
+describe('againstPosition', () => {
+  it('sets a rating against his position, in words', () => {
+    expect(againstPosition(0.624, 'FWD')).toBe('+0.62 on the average forward');
+    expect(againstPosition(-0.1, 'GK')).toBe('−0.10 on the average keeper');
+    expect(againstPosition(0, 'MID')).toBe('+0.00 on the average midfielder');
   });
 });

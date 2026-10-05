@@ -4,6 +4,7 @@ import type { AwardLine } from '@pl/engine';
 import { useState } from 'react';
 import { Card } from '../components/Card';
 import { ClubBadge, positionEdge } from '../components/ClubBadge';
+import { againstPosition } from '../play/lib/preview';
 import { LeagueTable } from './LeagueTable';
 import {
   cleanSheets,
@@ -31,6 +32,12 @@ const secondary = (kind: AwardKind, line: AwardLine): string =>
   kind === 'goals'
     ? `${unit(line.assists, 'assist')} · ${unit(line.appearances, 'app')}`
     : `${unit(line.goals, 'goal')} · ${unit(line.assists, 'assist')} · ${unit(line.appearances, 'app')}`;
+
+/** What the top-three number shows: goals, or a rating set against his position's average. */
+const raceNumber = (kind: AwardKind, line: AwardLine): string =>
+  kind === 'goals'
+    ? String(line.goals)
+    : `${line.ratingVsPosition >= 0 ? '+' : '−'}${Math.abs(line.ratingVsPosition).toFixed(2)}`;
 
 /** One award: a card for the winner, and the top three underneath so the race is visible. */
 function AwardCard({
@@ -63,6 +70,9 @@ function AwardCard({
               {hero(kind, winner).value} <span>{hero(kind, winner).unit}</span>
             </p>
             <p className="aw-more">{secondary(kind, winner)}</p>
+            {kind === 'rating' ? (
+              <p className="aw-vs">{againstPosition(winner.ratingVsPosition, winner.position)}</p>
+            ) : null}
           </>
         ) : (
           <p className="aw-more">Nobody scored this season.</p>
@@ -75,7 +85,7 @@ function AwardCard({
               <b>{index + 1}</b>
               <span className="aw-race-name">{line.name}</span>
               <span className="aw-race-club">{codeOf(line.clubId)}</span>
-              <strong>{hero(kind, line).value}</strong>
+              <strong>{raceNumber(kind, line)}</strong>
             </li>
           ))}
         </ol>
@@ -238,6 +248,10 @@ export function SeasonFinale({
           />
         </div>
       ) : null}
+      <p className="aw-note">
+        Players of the season are ranked by rating against the average for their position (the
+        figures in the top three), so a keeper does not win on his position alone.
+      </p>
 
       <LeagueTable table={view.table} names={names} caption="Final league table" />
 

@@ -157,6 +157,19 @@ export function fixturePicks(
   };
 }
 
+const POSITION_WORDS: Record<string, string> = {
+  GK: 'keeper',
+  DEF: 'defender',
+  MID: 'midfielder',
+  FWD: 'forward',
+};
+
+/** "+0.62 on the average forward": a rating set against his position's average. */
+export function againstPosition(ratingVsPosition: number, position: string): string {
+  const sign = ratingVsPosition >= 0 ? '+' : '−';
+  return `${sign}${Math.abs(ratingVsPosition).toFixed(2)} on the average ${POSITION_WORDS[position] ?? 'player'}`;
+}
+
 /** Whole numbers with a tilde: "~54". */
 export const about = (value: number): string => `~${Math.round(value)}`;
 

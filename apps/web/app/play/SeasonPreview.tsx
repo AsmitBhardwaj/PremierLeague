@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import type { ClubIdentity } from './lib/persistence';
 import {
   about,
+  againstPosition,
   finishRange,
   fixturePicks,
   oddsLines,
@@ -203,7 +204,9 @@ export function SeasonPreview({
             <PlayerLine
               label="Star player"
               player={forecast?.starPlayer}
-              value={(p) => `${p.averageRating.toFixed(2)} average rating`}
+              value={(p) =>
+                `${p.averageRating.toFixed(2)} average rating, ${againstPosition(p.ratingVsPosition, p.position)}`
+              }
             />
           </dl>
           {forecastDone && !forecast ? (
